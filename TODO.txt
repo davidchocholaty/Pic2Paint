@@ -1,0 +1,8 @@
+TODO nejakej blur pri kresleni nebo nejaky rozostreni
+TODO velikots kresliciho canvas vuci obrazku
+TODO jine zpracovani obrazku vstupniho nez 1:1
+- napriklad linearne pujde po radcich dle velikosti brushSize
+- nebo to stejne pro sloupce
+- nebo diagonalne
+- nebo zcela nahodne po obrazku
+TODO nejak pekne upravit css appky a nazev Pic2Paint
