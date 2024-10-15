@@ -9,6 +9,8 @@ const effectStrengthInput = document.getElementById('effectStrength') as HTMLInp
 const samplingMethodSelect = document.getElementById('samplingMethod') as HTMLSelectElement;
 const samplingStartSelect = document.getElementById('samplingStart') as HTMLSelectElement;
 const samplingDirectionSelect = document.getElementById('samplingDirection') as HTMLSelectElement;
+let currentColumn: number = 0;
+let columnDirection: 'down' | 'up' = 'down';
 
 const ctx = canvas.getContext('2d')!;
 const visualizationCtx = imageVisualization.getContext('2d')!;
@@ -228,8 +230,19 @@ function sampleImage(ctx: CanvasRenderingContext2D, sourceX: number, sourceY: nu
             ctx.drawImage(originalImage, sourceX, sourceY, sourceWidth, sourceHeight, 0, 0, brushSize, brushSize);
             break;
         case 'vertical':
-            samplingOffset = (samplingOffset + offsetSpeed * directionY) % originalImage.height;
-            ctx.drawImage(originalImage, startX, (startY + samplingOffset) % originalImage.height, sourceWidth, sourceHeight, 0, 0, brushSize, brushSize);
+            samplingOffset += offsetSpeed * directionY;
+            if (samplingOffset >= originalImage.height || samplingOffset < 0) {
+                // Move to the next column
+                currentColumn += directionX;
+                if (currentColumn >= Math.floor(originalImage.width / sourceWidth) || currentColumn < 0) {
+                    // Wrap around to the first/last column
+                    currentColumn = directionX > 0 ? 0 : Math.floor(originalImage.width / sourceWidth) - 1;
+                }
+                // Reset the vertical offset
+                samplingOffset = directionY > 0 ? 0 : originalImage.height - sourceHeight;
+            }
+            startX = currentColumn * sourceWidth;
+            ctx.drawImage(originalImage, startX, samplingOffset, sourceWidth, sourceHeight, 0, 0, brushSize, brushSize);
             break;
         case 'horizontal':
             samplingOffset = (samplingOffset + offsetSpeed * directionX) % originalImage.width;
@@ -406,8 +419,16 @@ function updateVisualization(x: number, y: number) {
         visualizationCtx.strokeStyle = 'blue';
         visualizationCtx.fillStyle = 'rgba(0, 0, 255, 0.3)'; // Semi-transparent blue
 
-        const scaledX = currentX * (imageVisualization.width / originalImage.width);
-        const scaledY = currentY * (imageVisualization.height / originalImage.height);
+        let scaledX: number, scaledY: number;
+        
+        if (samplingMethod === 'vertical') {
+            scaledX = currentColumn * sourceWidth * (imageVisualization.width / originalImage.width);
+            scaledY = samplingOffset * (imageVisualization.height / originalImage.height);
+        } else {
+            scaledX = currentX * (imageVisualization.width / originalImage.width);
+            scaledY = currentY * (imageVisualization.height / originalImage.height);
+        }
+
         const scaledWidth = sourceWidth * (imageVisualization.width / originalImage.width);
         const scaledHeight = sourceHeight * (imageVisualization.height / originalImage.height);
 
@@ -425,13 +446,10 @@ function updateVisualization(x: number, y: number) {
         // Draw arrow to indicate sampling direction
         const arrowSize = 10;
         visualizationCtx.beginPath();
-        visualizationCtx.moveTo(
-            (currentX + sourceWidth / 2) * (imageVisualization.width / originalImage.width),
-            (currentY + sourceHeight / 2) * (imageVisualization.height / originalImage.height)
-        );
+        visualizationCtx.moveTo(scaledX + scaledWidth / 2, scaledY + scaledHeight / 2);
 
-        let endX = currentX + sourceWidth / 2;
-        let endY = currentY + sourceHeight / 2;
+        let endX = scaledX + scaledWidth / 2;
+        let endY = scaledY + scaledHeight / 2;
 
         switch (samplingMethod) {
             case 'vertical':
@@ -446,27 +464,15 @@ function updateVisualization(x: number, y: number) {
                 break;
         }
 
-        visualizationCtx.lineTo(
-            endX * (imageVisualization.width / originalImage.width),
-            endY * (imageVisualization.height / originalImage.height)
-        );
+        visualizationCtx.lineTo(endX, endY);
         visualizationCtx.stroke();
 
         // Draw arrowhead
         visualizationCtx.beginPath();
         if (samplingMethod === 'vertical') {
-            visualizationCtx.moveTo(
-                (currentX + sourceWidth / 2 - 5) * (imageVisualization.width / originalImage.width),
-                endY * (imageVisualization.height / originalImage.height) - (samplingDirection === 'forward' ? -5 : 5)
-            );
-            visualizationCtx.lineTo(
-                (currentX + sourceWidth / 2) * (imageVisualization.width / originalImage.width),
-                endY * (imageVisualization.height / originalImage.height)
-            );
-            visualizationCtx.lineTo(
-                (currentX + sourceWidth / 2 + 5) * (imageVisualization.width / originalImage.width),
-                endY * (imageVisualization.height / originalImage.height) - (samplingDirection === 'forward' ? -5 : 5)
-            );
+            visualizationCtx.moveTo(endX - 5, endY - (samplingDirection === 'forward' ? 5 : -5));
+            visualizationCtx.lineTo(endX, endY);
+            visualizationCtx.lineTo(endX + 5, endY - (samplingDirection === 'forward' ? 5 : -5));
         } else if (samplingMethod === 'horizontal') {
             visualizationCtx.moveTo(
                 endX * (imageVisualization.width / originalImage.width) - (samplingDirection === 'forward' ? -5 : 5),
@@ -590,6 +596,11 @@ function resetCanvas() {
     
     // Clear the drawing layer
     initDrawingLayer(); // This reinitializes the drawing layer to a blank state
+    
+    // Reset sampling variables
+    samplingOffset = 0;
+    currentColumn = 0;
+    columnDirection = 'down';
 }
 
 // Add a reset button event listener
