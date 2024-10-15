@@ -21,6 +21,15 @@
         <option value="square">Square</option>
       </select>
     <br><br>
+    <label for="effectSelect">Effect:</label>
+    <select id="effectSelect">
+        <option value="none">No Effect</option>
+        <option value="blur">Blur</option>
+        <option value="sharpen">Sharpen</option>
+        <option value="edgeDetection">Edge Detection</option>
+    </select>
+    <input type="range" id="effectStrength" min="1" max="10" value="5">
+    <br><br>
     <label for="bgColor">Background Color:</label>
     <input type="color" id="bgColor" value="#ffffff">
     <br><br>

@@ -4,6 +4,8 @@ const bgColorInput = document.getElementById('bgColor') as HTMLInputElement;
 const imageInput = document.getElementById('imageInput') as HTMLInputElement;
 const imageVisualization = document.getElementById('imageVisualization') as HTMLCanvasElement;
 const brushTypeSelect = document.getElementById('brushType') as HTMLSelectElement;
+const effectSelect = document.getElementById('effectSelect') as HTMLSelectElement;
+const effectStrengthInput = document.getElementById('effectStrength') as HTMLInputElement;
 
 const ctx = canvas.getContext('2d')!;
 const visualizationCtx = imageVisualization.getContext('2d')!;
@@ -14,6 +16,8 @@ let lastY = 0;
 let brushSize: number = 5; // Default brush size
 let bgColor: string = '#ffffff'; // Default background color
 let brushType: 'circle' | 'square' | 'continuous' = 'continuous'; // Default brush type
+let currentEffect: 'none' | 'blur' | 'sharpen' | 'edgeDetection' = 'none'; // Default effect
+let effectStrength: number = 5; // Default effect strength
 
 // Function to set background color
 function setBackgroundColor(color: string) {
@@ -38,6 +42,16 @@ brushSizeInput.addEventListener('input', () => {
 // Update brush type when select changes
 brushTypeSelect.addEventListener('change', () => {
     brushType = brushTypeSelect.value as 'circle' | 'square' | 'continuous';
+});
+
+// Update effect type when select changes
+effectSelect.addEventListener('change', () => {
+    currentEffect = effectSelect.value as 'none' | 'blur' | 'sharpen' | 'edgeDetection';
+});
+
+// Update effect strength when slider changes
+effectStrengthInput.addEventListener('input', () => {
+    effectStrength = parseInt(effectStrengthInput.value, 10);
 });
 
 // Start drawing when mouse is down
@@ -101,6 +115,13 @@ function drawShape(x: number, y: number) {
         0, 0, brushSize, brushSize
     );
 
+    // Apply the selected effect
+    if (currentEffect !== 'none') {
+        const imageData = tempCtx.getImageData(0, 0, brushSize, brushSize);
+        const processedImageData = applyEffect(imageData, currentEffect, effectStrength);
+        tempCtx.putImageData(processedImageData, 0, 0);
+    }
+
     // Apply a shape mask
     tempCtx.globalCompositeOperation = 'destination-in';
     tempCtx.fillStyle = 'black';
@@ -136,6 +157,13 @@ function drawPoint(x: number, y: number) {
             0, 0, brushSize, brushSize
         );
 
+        // Apply the selected effect
+        if (currentEffect !== 'none') {
+            const imageData = tempCtx.getImageData(0, 0, brushSize, brushSize);
+            const processedImageData = applyEffect(imageData, currentEffect, effectStrength);
+            tempCtx.putImageData(processedImageData, 0, 0);
+        }
+
         // Apply a circular mask
         tempCtx.globalCompositeOperation = 'destination-in';
         tempCtx.fillStyle = 'black';
@@ -147,6 +175,106 @@ function drawPoint(x: number, y: number) {
         ctx.drawImage(tempCanvas, x - brushSize / 2, y - brushSize / 2);
     } else {
         drawShape(x, y);
+    }
+}
+
+function applyEffect(imageData: ImageData, effect: 'blur' | 'sharpen' | 'edgeDetection', strength: number): ImageData {
+    const data = imageData.data;
+    const width = imageData.width;
+    const height = imageData.height;
+    const outputData = new Uint8ClampedArray(data);
+
+    switch (effect) {
+        case 'blur':
+            boxBlur(data, outputData, width, height, strength);
+            break;
+        case 'sharpen':
+            sharpen(data, outputData, width, height, strength);
+            break;
+        case 'edgeDetection':
+            edgeDetection(data, outputData, width, height, strength);
+            break;
+    }
+
+    return new ImageData(outputData, width, height);
+}
+
+function boxBlur(input: Uint8ClampedArray, output: Uint8ClampedArray, width: number, height: number, radius: number) {
+    const size = width * height;
+    const kernelSize = (2 * radius + 1) ** 2;
+
+    for (let i = 0; i < size; i++) {
+        let r = 0, g = 0, b = 0, a = 0;
+        const x = i % width;
+        const y = Math.floor(i / width);
+
+        for (let ky = -radius; ky <= radius; ky++) {
+            for (let kx = -radius; kx <= radius; kx++) {
+                const px = Math.min(width - 1, Math.max(0, x + kx));
+                const py = Math.min(height - 1, Math.max(0, y + ky));
+                const j = (py * width + px) * 4;
+                r += input[j];
+                g += input[j + 1];
+                b += input[j + 2];
+                a += input[j + 3];
+            }
+        }
+
+        const pixelIndex = i * 4;
+        output[pixelIndex] = r / kernelSize;
+        output[pixelIndex + 1] = g / kernelSize;
+        output[pixelIndex + 2] = b / kernelSize;
+        output[pixelIndex + 3] = a / kernelSize;
+    }
+}
+
+function sharpen(input: Uint8ClampedArray, output: Uint8ClampedArray, width: number, height: number, strength: number) {
+    const kernel = [
+        0, -1, 0,
+        -1, 5, -1,
+        0, -1, 0
+    ];
+
+    applyConvolution(input, output, width, height, kernel, strength);
+}
+
+function edgeDetection(input: Uint8ClampedArray, output: Uint8ClampedArray, width: number, height: number, strength: number) {
+    const kernel = [
+        -1, -1, -1,
+        -1, 8, -1,
+        -1, -1, -1
+    ];
+
+    applyConvolution(input, output, width, height, kernel, strength);
+}
+
+function applyConvolution(input: Uint8ClampedArray, output: Uint8ClampedArray, width: number, height: number, kernel: number[], strength: number) {
+    const size = width * height;
+    const kernelSize = Math.sqrt(kernel.length);
+    const halfKernel = Math.floor(kernelSize / 2);
+
+    for (let i = 0; i < size; i++) {
+        let r = 0, g = 0, b = 0;
+        const x = i % width;
+        const y = Math.floor(i / width);
+
+        for (let ky = 0; ky < kernelSize; ky++) {
+            for (let kx = 0; kx < kernelSize; kx++) {
+                const px = Math.min(width - 1, Math.max(0, x + kx - halfKernel));
+                const py = Math.min(height - 1, Math.max(0, y + ky - halfKernel));
+                const j = (py * width + px) * 4;
+                const kernelValue = kernel[ky * kernelSize + kx];
+                r += input[j] * kernelValue;
+                g += input[j + 1] * kernelValue;
+                b += input[j + 2] * kernelValue;
+            }
+        }
+
+        const pixelIndex = i * 4;
+        output[pixelIndex] = Math.min(255, Math.max(0, input[pixelIndex] + (r - input[pixelIndex]) * (strength / 10)));
+        output[pixelIndex + 1] = Math.min(255, Math.max(0, input[pixelIndex + 1] + (g - input[pixelIndex + 1]) * (strength / 10)));
+        output[pixelIndex + 2] = Math.min(255, Math.max(0, input[pixelIndex + 2] + (b - input[pixelIndex + 2]) * (strength / 10)));
+        output[pixelIndex + 3] = input[pixelIndex + 3];
     }
 }
 
