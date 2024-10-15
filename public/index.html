@@ -9,8 +9,13 @@
 </head>
 <body>
     <h1>Image-Based Drawing App</h1>    
-    <canvas id="canvas" width="800" height="600"></canvas>
+    <canvas id="canvas" width="800" height="600" style="border:1px solid #000;"></canvas>
+    <br>
+    <label for="brushSize">Brush Size:</label>
+    <input type="range" id="brushSize" min="1" max="50" value="5">
+    <br><br>
+    <label for="bgColor">Background Color:</label>
+    <input type="color" id="bgColor" value="#ffffff">
     <script src="app.js" type="application/javascript"></script>
-    
 </body>
 </html>
