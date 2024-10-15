@@ -10,6 +10,9 @@ const samplingMethodSelect = document.getElementById('samplingMethod') as HTMLSe
 const samplingStartSelect = document.getElementById('samplingStart') as HTMLSelectElement;
 const samplingDirectionSelect = document.getElementById('samplingDirection') as HTMLSelectElement;
 let currentColumn: number = 0;
+let currentRow: number = 0;
+let currentDiagonal: number = 0;
+let diagonalOffset: number = 0;
 let columnDirection: 'down' | 'up' = 'down';
 
 const ctx = canvas.getContext('2d')!;
@@ -245,15 +248,53 @@ function sampleImage(ctx: CanvasRenderingContext2D, sourceX: number, sourceY: nu
             ctx.drawImage(originalImage, startX, samplingOffset, sourceWidth, sourceHeight, 0, 0, brushSize, brushSize);
             break;
         case 'horizontal':
-            samplingOffset = (samplingOffset + offsetSpeed * directionX) % originalImage.width;
-            ctx.drawImage(originalImage, (startX + samplingOffset) % originalImage.width, startY, sourceWidth, sourceHeight, 0, 0, brushSize, brushSize);
+            samplingOffset += offsetSpeed * directionX;
+            if (samplingOffset >= originalImage.width || samplingOffset < 0) {
+                // Move to the next row
+                currentRow += directionY;
+                if (currentRow >= Math.floor(originalImage.height / sourceHeight) || currentRow < 0) {
+                    // Wrap around to the first/last row
+                    currentRow = directionY > 0 ? 0 : Math.floor(originalImage.height / sourceHeight) - 1;
+                }
+                // Reset the horizontal offset
+                samplingOffset = directionX > 0 ? 0 : originalImage.width - sourceWidth;
+            }
+            startY = currentRow * sourceHeight;
+            ctx.drawImage(originalImage, samplingOffset, startY, sourceWidth, sourceHeight, 0, 0, brushSize, brushSize);
             break;
         case 'diagonal':
-            samplingOffset = (samplingOffset + offsetSpeed) % (originalImage.width + originalImage.height);
-            ctx.drawImage(originalImage, 
-                (startX + samplingOffset * directionX) % originalImage.width, 
-                (startY + samplingOffset * directionY) % originalImage.height, 
-                sourceWidth, sourceHeight, 0, 0, brushSize, brushSize);
+            diagonalOffset += offsetSpeed;
+            const maxDiagonalLength = Math.min(originalImage.width, originalImage.height);
+            
+            if (diagonalOffset >= maxDiagonalLength) {
+                // Move to the next diagonal
+                currentDiagonal += directionX;
+                if (currentDiagonal >= originalImage.width + originalImage.height - 1 || currentDiagonal < 0) {
+                    // Wrap around to the first/last diagonal
+                    currentDiagonal = directionX > 0 ? 0 : originalImage.width + originalImage.height - 2;
+                }
+                // Reset the diagonal offset
+                diagonalOffset = 0;
+            }
+
+            let x, y;
+            if (currentDiagonal < originalImage.height) {
+                x = 0;
+                y = currentDiagonal;
+            } else {
+                x = currentDiagonal - originalImage.height + 1;
+                y = originalImage.height - 1;
+            }
+
+            // Apply offset along the diagonal
+            x += diagonalOffset * directionX;
+            y -= diagonalOffset * directionY;
+
+            // Ensure we don't go out of bounds
+            x = Math.max(0, Math.min(x, originalImage.width - sourceWidth));
+            y = Math.max(0, Math.min(y, originalImage.height - sourceHeight));
+
+            ctx.drawImage(originalImage, x, y, sourceWidth, sourceHeight, 0, 0, brushSize, brushSize);
             break;
         case 'random':
             ctx.drawImage(originalImage, 
@@ -421,12 +462,39 @@ function updateVisualization(x: number, y: number) {
 
         let scaledX: number, scaledY: number;
         
-        if (samplingMethod === 'vertical') {
-            scaledX = currentColumn * sourceWidth * (imageVisualization.width / originalImage.width);
-            scaledY = samplingOffset * (imageVisualization.height / originalImage.height);
-        } else {
-            scaledX = currentX * (imageVisualization.width / originalImage.width);
-            scaledY = currentY * (imageVisualization.height / originalImage.height);
+        switch (samplingMethod) {
+            case 'vertical':
+                scaledX = currentColumn * sourceWidth * (imageVisualization.width / originalImage.width);
+                scaledY = samplingOffset * (imageVisualization.height / originalImage.height);
+                break;
+            case 'horizontal':
+                scaledX = samplingOffset * (imageVisualization.width / originalImage.width);
+                scaledY = currentRow * sourceHeight * (imageVisualization.height / originalImage.height);
+                break;
+            case 'diagonal':
+                let diagonalX, diagonalY;
+                if (currentDiagonal < originalImage.height) {
+                    diagonalX = 0;
+                    diagonalY = currentDiagonal;
+                } else {
+                    diagonalX = currentDiagonal - originalImage.height + 1;
+                    diagonalY = originalImage.height - 1;
+                }
+                
+                // Apply offset along the diagonal
+                diagonalX += diagonalOffset * (samplingDirection === 'forward' ? 1 : -1);
+                diagonalY -= diagonalOffset * (samplingDirection === 'forward' ? 1 : -1);
+
+                // Ensure we don't go out of bounds
+                diagonalX = Math.max(0, Math.min(diagonalX, originalImage.width - sourceWidth));
+                diagonalY = Math.max(0, Math.min(diagonalY, originalImage.height - sourceHeight));
+
+                scaledX = diagonalX * (imageVisualization.width / originalImage.width);
+                scaledY = diagonalY * (imageVisualization.height / originalImage.height);
+                break;
+            default:
+                scaledX = currentX * (imageVisualization.width / originalImage.width);
+                scaledY = currentY * (imageVisualization.height / originalImage.height);
         }
 
         const scaledWidth = sourceWidth * (imageVisualization.width / originalImage.width);
@@ -600,6 +668,9 @@ function resetCanvas() {
     // Reset sampling variables
     samplingOffset = 0;
     currentColumn = 0;
+    currentRow = 0;
+    currentDiagonal = 0;
+    diagonalOffset = 0;
     columnDirection = 'down';
 }
 

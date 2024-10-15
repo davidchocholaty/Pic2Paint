@@ -14,3 +14,4 @@ TODO nejake tlacitko help (asi logo otazniku), ktere popise pouzivani aplikace s
 Jestli me neco napad z https://sedmicha.github.io/drippaint/
 TODO nejak zajistit, ze prvne je nutne nahrat obrazek, nez bude mozne kreslit
 TODO zoom in zoom out na input image
+TODO fix sipka rozhozena u vizualizace
