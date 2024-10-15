@@ -2,6 +2,7 @@ const canvas = document.getElementById('canvas') as HTMLCanvasElement;
 const ctx = canvas.getContext('2d')!;
 const brushSizeInput = document.getElementById('brushSize') as HTMLInputElement;
 const bgColorInput = document.getElementById('bgColor') as HTMLInputElement;
+const imageInput = document.getElementById('imageInput') as HTMLInputElement; // Image input element
 
 // Create an offscreen canvas to store drawings
 const offscreenCanvas = document.createElement('canvas');
@@ -73,4 +74,25 @@ canvas.addEventListener('mousemove', (e) => {
     
     // Update the main canvas
     setBackgroundColor(bgColor);
+});
+
+// Image loading functionality
+imageInput.addEventListener('change', (event) => {
+    const file = (event.target as HTMLInputElement).files![0];
+    const reader = new FileReader();
+
+    reader.onload = (e) => {
+        const img = new Image();
+        img.src = e.target!.result as string;
+
+        img.onload = () => {
+            // Draw the image onto the offscreen canvas
+            offscreenCtx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+            // Redraw everything (background color, image, drawings) onto the main canvas
+            setBackgroundColor(bgColor);
+        };
+    };
+
+    reader.readAsDataURL(file); // Read the image file as a data URL
 });
