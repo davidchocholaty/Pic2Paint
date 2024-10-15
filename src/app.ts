@@ -6,6 +6,9 @@ const imageVisualization = document.getElementById('imageVisualization') as HTML
 const brushTypeSelect = document.getElementById('brushType') as HTMLSelectElement;
 const effectSelect = document.getElementById('effectSelect') as HTMLSelectElement;
 const effectStrengthInput = document.getElementById('effectStrength') as HTMLInputElement;
+const samplingMethodSelect = document.getElementById('samplingMethod') as HTMLSelectElement;
+const samplingStartSelect = document.getElementById('samplingStart') as HTMLSelectElement;
+const samplingDirectionSelect = document.getElementById('samplingDirection') as HTMLSelectElement;
 
 const ctx = canvas.getContext('2d')!;
 const visualizationCtx = imageVisualization.getContext('2d')!;
@@ -13,17 +16,29 @@ const visualizationCtx = imageVisualization.getContext('2d')!;
 let drawing = false;
 let lastX = 0;
 let lastY = 0;
-let brushSize: number = 5; // Default brush size
-let bgColor: string = '#ffffff'; // Default background color
-let brushType: 'circle' | 'square' | 'continuous' = 'continuous'; // Default brush type
-let currentEffect: 'none' | 'blur' | 'sharpen' | 'edgeDetection' = 'none'; // Default effect
-let effectStrength: number = 5; // Default effect strength
+let brushSize: number = 5;
+let bgColor: string = '#ffffff';
+let brushType: 'circle' | 'square' | 'continuous' = 'continuous';
+let currentEffect: 'none' | 'blur' | 'sharpen' | 'edgeDetection' = 'none';
+let effectStrength: number = 5;
+let samplingMethod: 'normal' | 'vertical' | 'horizontal' | 'diagonal' | 'random' = 'normal';
+let samplingStart: 'topLeft' | 'topRight' | 'bottomLeft' | 'bottomRight' = 'topLeft';
+let samplingDirection: 'forward' | 'backward' = 'forward';
+let samplingOffset: number = 0;
+let lastSamplingTime: number = 0;
+let originalImage: HTMLImageElement;
+let drawingLayer: ImageData;
 
-// Function to set background color
-function setBackgroundColor(color: string) {
-    ctx.fillStyle = color;
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+// Initialize drawing layer
+function initDrawingLayer() {
+    drawingLayer = ctx.createImageData(canvas.width, canvas.height);
+    for (let i = 0; i < drawingLayer.data.length; i += 4) {
+        drawingLayer.data[i + 3] = 0; // Set alpha to 0 (transparent)
+    }
 }
+
+// Call this function after canvas is initialized
+initDrawingLayer();
 
 // Set the initial background color when the page loads
 setBackgroundColor(bgColor);
@@ -54,12 +69,29 @@ effectStrengthInput.addEventListener('input', () => {
     effectStrength = parseInt(effectStrengthInput.value, 10);
 });
 
+// Update sampling method when select changes
+samplingMethodSelect.addEventListener('change', () => {
+    samplingMethod = samplingMethodSelect.value as 'normal' | 'vertical' | 'horizontal' | 'diagonal' | 'random';
+    samplingOffset = 0; // Reset offset when changing method
+});
+
+samplingStartSelect.addEventListener('change', () => {
+    samplingStart = samplingStartSelect.value as 'topLeft' | 'topRight' | 'bottomLeft' | 'bottomRight';
+    samplingOffset = 0;
+});
+
+samplingDirectionSelect.addEventListener('change', () => {
+    samplingDirection = samplingDirectionSelect.value as 'forward' | 'backward';
+    samplingOffset = 0;
+});
+
 // Start drawing when mouse is down
 canvas.addEventListener('mousedown', (e) => {
     drawing = true;
     [lastX, lastY] = [e.offsetX, e.offsetY];
+    lastSamplingTime = Date.now(); // Initialize the last sampling time
     if (brushType !== 'continuous') {
-        drawShape(e.offsetX, e.offsetY);
+        drawShape(e.offsetX, e.offsetY, 0); // Use 0 as initial speed
     }
 });
 
@@ -67,62 +99,47 @@ canvas.addEventListener('mousedown', (e) => {
 canvas.addEventListener('mouseup', stopDrawing);
 canvas.addEventListener('mouseleave', stopDrawing);
 
+// Draw on canvas
+canvas.addEventListener('mousemove', (e) => {
+    if (drawing) {
+        const currentTime = Date.now();
+        const timeDiff = currentTime - lastSamplingTime;
+        const speed = Math.sqrt((e.offsetX - lastX) ** 2 + (e.offsetY - lastY) ** 2) / timeDiff;
+        
+        if (brushType === 'continuous') {
+            drawLine(lastX, lastY, e.offsetX, e.offsetY, speed);
+        } else {
+            drawShape(e.offsetX, e.offsetY, speed);
+        }
+        [lastX, lastY] = [e.offsetX, e.offsetY];
+        lastSamplingTime = currentTime;
+    }
+    updateVisualization(e.offsetX, e.offsetY);
+});
+
 function stopDrawing() {
     drawing = false;
 }
 
-// Draw on canvas
-canvas.addEventListener('mousemove', (e) => {
-    updateVisualization(e.offsetX, e.offsetY);
-    if (drawing) {
-        if (brushType === 'continuous') {
-            drawLine(lastX, lastY, e.offsetX, e.offsetY);
-        } else {
-            drawShape(e.offsetX, e.offsetY);
-        }
-        [lastX, lastY] = [e.offsetX, e.offsetY];
-    }
-});
-
-function drawLine(fromX: number, fromY: number, toX: number, toY: number) {
-    const distance = Math.sqrt((toX - fromX) ** 2 + (toY - fromY) ** 2);
-    const steps = Math.ceil(distance);
-
-    for (let i = 0; i <= steps; i++) {
-        const t = i / steps;
-        const x = fromX + (toX - fromX) * t;
-        const y = fromY + (toY - fromY) * t;
-        drawPoint(x, y);
-    }
-}
-
-function drawShape(x: number, y: number) {
+function drawShape(x: number, y: number, speed: number) {
     const sourceX = Math.floor(x * (originalImage.width / canvas.width));
     const sourceY = Math.floor(y * (originalImage.height / canvas.height));
     const sourceWidth = Math.ceil(brushSize * (originalImage.width / canvas.width));
     const sourceHeight = Math.ceil(brushSize * (originalImage.height / canvas.height));
 
-    // Create a temporary canvas to hold the image data
     const tempCanvas = document.createElement('canvas');
     const tempCtx = tempCanvas.getContext('2d')!;
     tempCanvas.width = brushSize;
     tempCanvas.height = brushSize;
 
-    // Draw the image section onto the temporary canvas
-    tempCtx.drawImage(
-        originalImage,
-        sourceX, sourceY, sourceWidth, sourceHeight,
-        0, 0, brushSize, brushSize
-    );
+    sampleImage(tempCtx, sourceX, sourceY, sourceWidth, sourceHeight, speed);
 
-    // Apply the selected effect
     if (currentEffect !== 'none') {
         const imageData = tempCtx.getImageData(0, 0, brushSize, brushSize);
         const processedImageData = applyEffect(imageData, currentEffect, effectStrength);
         tempCtx.putImageData(processedImageData, 0, 0);
     }
 
-    // Apply a shape mask
     tempCtx.globalCompositeOperation = 'destination-in';
     tempCtx.fillStyle = 'black';
     if (brushType === 'circle') {
@@ -133,48 +150,104 @@ function drawShape(x: number, y: number) {
         tempCtx.fillRect(0, 0, brushSize, brushSize);
     }
 
-    // Draw the shaped image onto the main canvas
     ctx.drawImage(tempCanvas, x - brushSize / 2, y - brushSize / 2);
+    updateDrawingLayer(x - brushSize / 2, y - brushSize / 2, brushSize, brushSize);
 }
 
-function drawPoint(x: number, y: number) {
-    if (brushType === 'continuous') {
-        const sourceX = Math.floor(x * (originalImage.width / canvas.width));
-        const sourceY = Math.floor(y * (originalImage.height / canvas.height));
-        const sourceWidth = Math.ceil(brushSize * (originalImage.width / canvas.width));
-        const sourceHeight = Math.ceil(brushSize * (originalImage.height / canvas.height));
+function drawLine(fromX: number, fromY: number, toX: number, toY: number, speed: number) {
+    const distance = Math.sqrt((toX - fromX) ** 2 + (toY - fromY) ** 2);
+    const steps = Math.ceil(distance);
 
-        // Create a temporary canvas to hold the image data
-        const tempCanvas = document.createElement('canvas');
-        const tempCtx = tempCanvas.getContext('2d')!;
-        tempCanvas.width = brushSize;
-        tempCanvas.height = brushSize;
+    for (let i = 0; i <= steps; i++) {
+        const t = i / steps;
+        const x = fromX + (toX - fromX) * t;
+        const y = fromY + (toY - fromY) * t;
+        drawPoint(x, y, speed);
+    }
+}
 
-        // Draw the image section onto the temporary canvas
-        tempCtx.drawImage(
-            originalImage,
-            sourceX, sourceY, sourceWidth, sourceHeight,
-            0, 0, brushSize, brushSize
-        );
+function drawPoint(x: number, y: number, speed: number) {
+    const sourceX = Math.floor(x * (originalImage.width / canvas.width));
+    const sourceY = Math.floor(y * (originalImage.height / canvas.height));
+    const sourceWidth = Math.ceil(brushSize * (originalImage.width / canvas.width));
+    const sourceHeight = Math.ceil(brushSize * (originalImage.height / canvas.height));
 
-        // Apply the selected effect
-        if (currentEffect !== 'none') {
-            const imageData = tempCtx.getImageData(0, 0, brushSize, brushSize);
-            const processedImageData = applyEffect(imageData, currentEffect, effectStrength);
-            tempCtx.putImageData(processedImageData, 0, 0);
-        }
+    const tempCanvas = document.createElement('canvas');
+    const tempCtx = tempCanvas.getContext('2d')!;
+    tempCanvas.width = brushSize;
+    tempCanvas.height = brushSize;
 
-        // Apply a circular mask
-        tempCtx.globalCompositeOperation = 'destination-in';
-        tempCtx.fillStyle = 'black';
-        tempCtx.beginPath();
-        tempCtx.arc(brushSize / 2, brushSize / 2, brushSize / 2, 0, Math.PI * 2);
-        tempCtx.fill();
+    sampleImage(tempCtx, sourceX, sourceY, sourceWidth, sourceHeight, speed);
 
-        // Draw the shaped image onto the main canvas
-        ctx.drawImage(tempCanvas, x - brushSize / 2, y - brushSize / 2);
-    } else {
-        drawShape(x, y);
+    if (currentEffect !== 'none') {
+        const imageData = tempCtx.getImageData(0, 0, brushSize, brushSize);
+        const processedImageData = applyEffect(imageData, currentEffect, effectStrength);
+        tempCtx.putImageData(processedImageData, 0, 0);
+    }
+
+    tempCtx.globalCompositeOperation = 'destination-in';
+    tempCtx.fillStyle = 'black';
+    tempCtx.beginPath();
+    tempCtx.arc(brushSize / 2, brushSize / 2, brushSize / 2, 0, Math.PI * 2);
+    tempCtx.fill();
+
+    ctx.drawImage(tempCanvas, x - brushSize / 2, y - brushSize / 2);
+    updateDrawingLayer(x - brushSize / 2, y - brushSize / 2, brushSize, brushSize);
+}
+
+function sampleImage(ctx: CanvasRenderingContext2D, sourceX: number, sourceY: number, sourceWidth: number, sourceHeight: number, speed: number) {
+    const offsetSpeed = Math.ceil(speed * 50);
+    let startX: number, startY: number, directionX: number, directionY: number;
+
+    switch (samplingStart) {
+        case 'topLeft':
+            [startX, startY] = [0, 0];
+            break;
+        case 'topRight':
+            [startX, startY] = [originalImage.width - sourceWidth, 0];
+            break;
+        case 'bottomLeft':
+            [startX, startY] = [0, originalImage.height - sourceHeight];
+            break;
+        case 'bottomRight':
+            [startX, startY] = [originalImage.width - sourceWidth, originalImage.height - sourceHeight];
+            break;
+    }
+
+    switch (samplingDirection) {
+        case 'forward':
+            [directionX, directionY] = [1, 1];
+            break;
+        case 'backward':
+            [directionX, directionY] = [-1, -1];
+            break;
+    }
+
+    switch (samplingMethod) {
+        case 'normal':
+            ctx.drawImage(originalImage, sourceX, sourceY, sourceWidth, sourceHeight, 0, 0, brushSize, brushSize);
+            break;
+        case 'vertical':
+            samplingOffset = (samplingOffset + offsetSpeed * directionY) % originalImage.height;
+            ctx.drawImage(originalImage, startX, (startY + samplingOffset) % originalImage.height, sourceWidth, sourceHeight, 0, 0, brushSize, brushSize);
+            break;
+        case 'horizontal':
+            samplingOffset = (samplingOffset + offsetSpeed * directionX) % originalImage.width;
+            ctx.drawImage(originalImage, (startX + samplingOffset) % originalImage.width, startY, sourceWidth, sourceHeight, 0, 0, brushSize, brushSize);
+            break;
+        case 'diagonal':
+            samplingOffset = (samplingOffset + offsetSpeed) % (originalImage.width + originalImage.height);
+            ctx.drawImage(originalImage, 
+                (startX + samplingOffset * directionX) % originalImage.width, 
+                (startY + samplingOffset * directionY) % originalImage.height, 
+                sourceWidth, sourceHeight, 0, 0, brushSize, brushSize);
+            break;
+        case 'random':
+            ctx.drawImage(originalImage, 
+                Math.random() * (originalImage.width - sourceWidth), 
+                Math.random() * (originalImage.height - sourceHeight), 
+                sourceWidth, sourceHeight, 0, 0, brushSize, brushSize);
+            break;
     }
 }
 
@@ -279,41 +352,170 @@ function applyConvolution(input: Uint8ClampedArray, output: Uint8ClampedArray, w
 }
 
 function updateVisualization(x: number, y: number) {
-    // Clear previous visualization
     visualizationCtx.clearRect(0, 0, imageVisualization.width, imageVisualization.height);
     
-    // Redraw the original image
     if (originalImage) {
         visualizationCtx.drawImage(originalImage, 0, 0, imageVisualization.width, imageVisualization.height);
     }
 
-    // Draw the current brush position
-    visualizationCtx.fillStyle = 'rgba(255, 0, 0, 0.5)';
-    
+    const sourceX = Math.floor(x * (originalImage.width / canvas.width));
+    const sourceY = Math.floor(y * (originalImage.height / canvas.height));
+    const sourceWidth = Math.ceil(brushSize * (originalImage.width / canvas.width));
+    const sourceHeight = Math.ceil(brushSize * (originalImage.height / canvas.height));
+
+    let startX: number, startY: number;
+    switch (samplingStart) {
+        case 'topLeft':
+            [startX, startY] = [0, 0];
+            break;
+        case 'topRight':
+            [startX, startY] = [originalImage.width - sourceWidth, 0];
+            break;
+        case 'bottomLeft':
+            [startX, startY] = [0, originalImage.height - sourceHeight];
+            break;
+        case 'bottomRight':
+            [startX, startY] = [originalImage.width - sourceWidth, originalImage.height - sourceHeight];
+            break;
+    }
+
+    // Calculate current sampling position based on offset
+    let currentX = startX;
+    let currentY = startY;
+    switch (samplingMethod) {
+        case 'vertical':
+            currentY = (startY + samplingOffset) % originalImage.height;
+            break;
+        case 'horizontal':
+            currentX = (startX + samplingOffset) % originalImage.width;
+            break;
+        case 'diagonal':
+            currentX = (startX + samplingOffset) % originalImage.width;
+            currentY = (startY + samplingOffset) % originalImage.height;
+            break;
+        case 'random':
+            currentX = Math.random() * (originalImage.width - sourceWidth);
+            currentY = Math.random() * (originalImage.height - sourceHeight);
+            break;
+    }
+
+    visualizationCtx.lineWidth = 2;
+
+    if (samplingMethod !== 'normal') {
+        // Use a different color for non-normal sampling methods
+        visualizationCtx.strokeStyle = 'blue';
+        visualizationCtx.fillStyle = 'rgba(0, 0, 255, 0.3)'; // Semi-transparent blue
+
+        const scaledX = currentX * (imageVisualization.width / originalImage.width);
+        const scaledY = currentY * (imageVisualization.height / originalImage.height);
+        const scaledWidth = sourceWidth * (imageVisualization.width / originalImage.width);
+        const scaledHeight = sourceHeight * (imageVisualization.height / originalImage.height);
+
+        // Draw the sampling area based on brush type
+        if (brushType === 'circle' || brushType === 'continuous') {
+            visualizationCtx.beginPath();
+            visualizationCtx.arc(scaledX + scaledWidth / 2, scaledY + scaledHeight / 2, scaledWidth / 2, 0, Math.PI * 2);
+            visualizationCtx.fill();
+            visualizationCtx.stroke();
+        } else if (brushType === 'square') {
+            visualizationCtx.fillRect(scaledX, scaledY, scaledWidth, scaledHeight);
+            visualizationCtx.strokeRect(scaledX, scaledY, scaledWidth, scaledHeight);
+        }
+
+        // Draw arrow to indicate sampling direction
+        const arrowSize = 10;
+        visualizationCtx.beginPath();
+        visualizationCtx.moveTo(
+            (currentX + sourceWidth / 2) * (imageVisualization.width / originalImage.width),
+            (currentY + sourceHeight / 2) * (imageVisualization.height / originalImage.height)
+        );
+
+        let endX = currentX + sourceWidth / 2;
+        let endY = currentY + sourceHeight / 2;
+
+        switch (samplingMethod) {
+            case 'vertical':
+                endY += samplingDirection === 'forward' ? arrowSize : -arrowSize;
+                break;
+            case 'horizontal':
+                endX += samplingDirection === 'forward' ? arrowSize : -arrowSize;
+                break;
+            case 'diagonal':
+                endX += samplingDirection === 'forward' ? arrowSize : -arrowSize;
+                endY += samplingDirection === 'forward' ? arrowSize : -arrowSize;
+                break;
+        }
+
+        visualizationCtx.lineTo(
+            endX * (imageVisualization.width / originalImage.width),
+            endY * (imageVisualization.height / originalImage.height)
+        );
+        visualizationCtx.stroke();
+
+        // Draw arrowhead
+        visualizationCtx.beginPath();
+        if (samplingMethod === 'vertical') {
+            visualizationCtx.moveTo(
+                (currentX + sourceWidth / 2 - 5) * (imageVisualization.width / originalImage.width),
+                endY * (imageVisualization.height / originalImage.height) - (samplingDirection === 'forward' ? -5 : 5)
+            );
+            visualizationCtx.lineTo(
+                (currentX + sourceWidth / 2) * (imageVisualization.width / originalImage.width),
+                endY * (imageVisualization.height / originalImage.height)
+            );
+            visualizationCtx.lineTo(
+                (currentX + sourceWidth / 2 + 5) * (imageVisualization.width / originalImage.width),
+                endY * (imageVisualization.height / originalImage.height) - (samplingDirection === 'forward' ? -5 : 5)
+            );
+        } else if (samplingMethod === 'horizontal') {
+            visualizationCtx.moveTo(
+                endX * (imageVisualization.width / originalImage.width) - (samplingDirection === 'forward' ? -5 : 5),
+                (currentY + sourceHeight / 2 - 5) * (imageVisualization.height / originalImage.height)
+            );
+            visualizationCtx.lineTo(
+                endX * (imageVisualization.width / originalImage.width),
+                (currentY + sourceHeight / 2) * (imageVisualization.height / originalImage.height)
+            );
+            visualizationCtx.lineTo(
+                endX * (imageVisualization.width / originalImage.width) - (samplingDirection === 'forward' ? -5 : 5),
+                (currentY + sourceHeight / 2 + 5) * (imageVisualization.height / originalImage.height)
+            );
+        } else if (samplingMethod === 'diagonal') {
+            visualizationCtx.moveTo(
+                endX * (imageVisualization.width / originalImage.width) - (samplingDirection === 'forward' ? -5 : 5),
+                endY * (imageVisualization.height / originalImage.height) - (samplingDirection === 'forward' ? -5 : 5)
+            );
+            visualizationCtx.lineTo(
+                endX * (imageVisualization.width / originalImage.width),
+                endY * (imageVisualization.height / originalImage.height)
+            );
+            visualizationCtx.lineTo(
+                endX * (imageVisualization.width / originalImage.width) - (samplingDirection === 'forward' ? -5 : 5),
+                endY * (imageVisualization.height / originalImage.height) + (samplingDirection === 'forward' ? 5 : -5)
+            );
+        }
+        visualizationCtx.fill();
+    }
+
+    // Always show brush visualization based on mouse movement
+    visualizationCtx.strokeStyle = 'red';
     const scaledX = x * (imageVisualization.width / canvas.width);
     const scaledY = y * (imageVisualization.height / canvas.height);
     const scaledBrushSize = brushSize * (imageVisualization.width / canvas.width);
 
-    if (brushType === 'circle') {
+    if (brushType === 'circle' || brushType === 'continuous') {
         visualizationCtx.beginPath();
         visualizationCtx.arc(scaledX, scaledY, scaledBrushSize / 2, 0, Math.PI * 2);
-        visualizationCtx.fill();
+        visualizationCtx.stroke();
     } else if (brushType === 'square') {
-        visualizationCtx.fillRect(
+        visualizationCtx.strokeRect(
             scaledX - scaledBrushSize / 2,
             scaledY - scaledBrushSize / 2,
             scaledBrushSize,
             scaledBrushSize
         );
-    } else { // continuous
-        visualizationCtx.beginPath();
-        visualizationCtx.arc(scaledX, scaledY, scaledBrushSize / 2, 0, Math.PI * 2);
-        visualizationCtx.fill();
     }
 }
-
-// Store the original image
-let originalImage: HTMLImageElement;
 
 // Image loading functionality
 imageInput.addEventListener('change', (event) => {
@@ -325,23 +527,75 @@ imageInput.addEventListener('change', (event) => {
         originalImage.src = e.target!.result as string;
 
         originalImage.onload = () => {
-            // Resize and draw the image onto the visualization canvas
-            const scale = Math.max(
-                imageVisualization.width / originalImage.width,
-                imageVisualization.height / originalImage.height
-            );
-            const newWidth = originalImage.width * scale;
-            const newHeight = originalImage.height * scale;
-            const offsetX = (imageVisualization.width - newWidth) / 2;
-            const offsetY = (imageVisualization.height - newHeight) / 2;
-
-            visualizationCtx.clearRect(0, 0, imageVisualization.width, imageVisualization.height);
-            visualizationCtx.drawImage(originalImage, offsetX, offsetY, newWidth, newHeight);
+            // Resize and draw the image onto both canvases
+            resizeAndDrawImage(canvas, ctx);
+            resizeAndDrawImage(imageVisualization, visualizationCtx);
         };
     };
 
     reader.readAsDataURL(file);
 });
+
+function resizeAndDrawImage(targetCanvas: HTMLCanvasElement, targetCtx: CanvasRenderingContext2D) {
+    // Calculate the scaling factor to fit the image within the canvas
+    const scale = Math.min(
+        targetCanvas.width / originalImage.width,
+        targetCanvas.height / originalImage.height
+    );
+    const newWidth = originalImage.width * scale;
+    const newHeight = originalImage.height * scale;
+    const offsetX = (targetCanvas.width - newWidth) / 2;
+    const offsetY = (targetCanvas.height - newHeight) / 2;
+
+    // Clear the canvas and draw the image
+    targetCtx.clearRect(0, 0, targetCanvas.width, targetCanvas.height);
+    targetCtx.drawImage(originalImage, offsetX, offsetY, newWidth, newHeight);
+}
+
+// Modify the updateDrawingLayer function
+function updateDrawingLayer(x: number, y: number, width: number, height: number) {
+    const drawnContent = ctx.getImageData(x, y, width, height);
+    
+    for (let i = 0; i < drawnContent.data.length; i += 4) {
+        const drawingLayerIndex = ((y + Math.floor(i / (4 * width))) * canvas.width + x + (i / 4) % width) * 4;
+        
+        // If the pixel is not fully transparent in the drawn content
+        if (drawnContent.data[i + 3] > 0) {
+            // Copy the pixel to the drawing layer
+            drawingLayer.data[drawingLayerIndex] = drawnContent.data[i];
+            drawingLayer.data[drawingLayerIndex + 1] = drawnContent.data[i + 1];
+            drawingLayer.data[drawingLayerIndex + 2] = drawnContent.data[i + 2];
+            drawingLayer.data[drawingLayerIndex + 3] = drawnContent.data[i + 3];
+        }
+    }
+}
+
+// Modify the setBackgroundColor function
+function setBackgroundColor(color: string) {
+    ctx.fillStyle = color;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    // Redraw the content from the drawing layer
+    ctx.putImageData(drawingLayer, 0, 0);
+}
+
+// Modify the resetCanvas function
+function resetCanvas() {
+    if (originalImage) {
+        resizeAndDrawImage(canvas, ctx);
+    } else {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        setBackgroundColor(bgColor);
+    }
+    
+    // Clear the drawing layer
+    initDrawingLayer(); // This reinitializes the drawing layer to a blank state
+}
+
+// Add a reset button event listener
+const resetButton = document.getElementById('resetButton') as HTMLButtonElement;
+resetButton.addEventListener('click', resetCanvas);
+
 
 // Add mousemove event listener to canvas to update visualization even when not drawing
 canvas.addEventListener('mousemove', (e) => {

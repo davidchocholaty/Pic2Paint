@@ -1,4 +1,9 @@
+TODO posouvat pri sampling method (vertical, horizontal, diagonal na dalsi sloupec, radek, ...)
+TODO pri zmene background se nezmeni to, co jiz bylo nakresleno
+TODO pri nahrani obrazku se obrazek nenahraje na prvni canvas
+TODO jestli funguje tlacitko reset canvas na vsechno a pokud ne tak fix
 TODO velikots kresliciho canvas vuci obrazku - asi automaticky nastavit
+TODO rozsahy popojizdecich veci a default hodnoty
 TODO jine zpracovani obrazku vstupniho nez 1:1
 - napriklad linearne pujde po radcich dle velikosti brushSize
 - nebo to stejne pro sloupce
@@ -7,3 +12,5 @@ TODO jine zpracovani obrazku vstupniho nez 1:1
 TODO nejak pekne upravit css appky a nazev Pic2Paint
 TODO nejake tlacitko help (asi logo otazniku), ktere popise pouzivani aplikace s vyskakovacim oknem
 Jestli me neco napad z https://sedmicha.github.io/drippaint/
+TODO nejak zajistit, ze prvne je nutne nahrat obrazek, nez bude mozne kreslit
+TODO zoom in zoom out na input image
