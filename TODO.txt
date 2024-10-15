@@ -1,7 +1,9 @@
-TODO velikots kresliciho canvas vuci obrazku
+TODO velikots kresliciho canvas vuci obrazku - asi automaticky nastavit
 TODO jine zpracovani obrazku vstupniho nez 1:1
 - napriklad linearne pujde po radcich dle velikosti brushSize
 - nebo to stejne pro sloupce
 - nebo diagonalne
 - nebo zcela nahodne po obrazku
 TODO nejak pekne upravit css appky a nazev Pic2Paint
+TODO nejake tlacitko help (asi logo otazniku), ktere popise pouzivani aplikace s vyskakovacim oknem
+Jestli me neco napad z https://sedmicha.github.io/drippaint/
