@@ -195,6 +195,8 @@ function sampleImage(ctx: CanvasRenderingContext2D, sourceX: number, sourceY: nu
     const offsetSpeed = Math.ceil(speed * 50);
     let startX: number, startY: number, directionX: number, directionY: number;
 
+    [startX, startY] = [0, 0];
+
     switch (samplingDirection) {
         case 'forward':
             [directionX, directionY] = [1, 1];
@@ -359,8 +361,9 @@ function updateVisualization(x: number, y: number) {
     const sourceWidth = Math.ceil(brushSize * (originalImage.width / canvas.width));
     const sourceHeight = Math.ceil(brushSize * (originalImage.height / canvas.height));
 
-    let startX: number = 0;
-    let startY: number = 0;
+    let startX: number, startY: number;
+
+    [startX, startY] = [0, 0];
 
     // Calculate current sampling position based on offset
     let currentX = 0;

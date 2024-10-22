@@ -5,88 +5,214 @@
     <title>Pic2Paint - Drawing App</title>
     <link rel="icon" href="favicon.ico" type="image/x-icon">
     <style>
-        .control-group {
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background-color: #f5f5f5;
+            padding: 20px;
+            color: #333;
+        }
+
+        .header {
+            text-align: center;
+            padding: 20px 0;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            color: #2c3e50;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .app-container {
+            max-width: 1800px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            gap: 20px;
+        }
+
+        .canvas-workspace {
+            display: flex;
+            gap: 20px;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .canvas-container canvas {
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+
+        .controls {
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .control-section {
+            margin-bottom: 30px;
+        }
+
+        .control-section h2 {
+            font-size: 1.2em;
+            color: #2c3e50;
             margin-bottom: 15px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #eee;
         }
+
+        .control-group {
+            margin-bottom: 20px;
+        }
+
         label {
-            display: inline-block;
-            width: 150px;
+            display: block;
+            margin-bottom: 8px;
+            color: #666;
+            font-size: 0.9em;
         }
-        canvas {
-            border: 1px solid #000;
+
+        select, input[type="range"], input[type="color"] {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background: #f9f9f9;
+        }
+
+        input[type="file"] {
+            width: 100%;
+            padding: 8px;
+        }
+
+        button {
+            width: 100%;
+            padding: 12px;
+            background: #3498db;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        button:hover {
+            background: #2980b9;
+        }
+
+        .canvas-wrapper {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .canvas-label {
+            font-size: 0.9em;
+            color: #666;
+            text-align: center;
         }
     </style>
 </head>
 <body>
-    <h1>Image-Based Drawing App</h1>
-    
-    <div class="canvas-container">
-        <canvas id="canvas" width="800" height="600"></canvas>
+    <div class="header">
+        <h1>Pic2Paint</h1>
+        <p>Transform your images into artistic masterpieces</p>
     </div>
-    
-    <div class="controls">
-        <div class="control-group">
-            <label for="brushSize">Brush Size:</label>
-            <input type="range" id="brushSize" min="1" max="50" value="5">
+
+    <div class="app-container">
+        <div class="controls">
+            <div class="control-section">
+                <h2>Brush Settings</h2>
+                <div class="control-group">
+                    <label for="brushSize">Brush Size</label>
+                    <input type="range" id="brushSize" min="1" max="50" value="5">
+                </div>
+                <div class="control-group">
+                    <label for="brushType">Brush Type</label>
+                    <select id="brushType">
+                        <option value="continuous">Continuous</option>
+                        <option value="circle">Circle</option>
+                        <option value="square">Square</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="control-section">
+                <h2>Effects</h2>
+                <div class="control-group">
+                    <label for="effectSelect">Effect Type</label>
+                    <select id="effectSelect">
+                        <option value="none">No Effect</option>
+                        <option value="blur">Blur</option>
+                        <option value="sharpen">Sharpen</option>
+                        <option value="edgeDetection">Edge Detection</option>
+                    </select>
+                </div>
+                <div class="control-group">
+                    <label for="effectStrength">Effect Strength</label>
+                    <input type="range" id="effectStrength" min="1" max="10" value="5">
+                </div>
+            </div>
+
+            <div class="control-section">
+                <h2>Canvas Settings</h2>
+                <div class="control-group">
+                    <label for="bgColor">Background Color</label>
+                    <input type="color" id="bgColor" value="#ffffff">
+                </div>
+                <div class="control-group">
+                    <label for="imageInput">Upload Image</label>
+                    <input type="file" id="imageInput" accept="image/*">
+                </div>
+            </div>
+
+            <div class="control-section">
+                <h2>Sampling Options</h2>
+                <div class="control-group">
+                    <label for="samplingMethod">Method</label>
+                    <select id="samplingMethod">
+                        <option value="normal">Normal</option>
+                        <option value="vertical">Vertical</option>
+                        <option value="horizontal">Horizontal</option>
+                        <option value="random">Random</option>
+                    </select>
+                </div>
+                <div class="control-group">
+                    <label for="samplingDirection">Direction</label>
+                    <select id="samplingDirection">
+                        <option value="forward">Forward</option>
+                        <option value="backward">Backward</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="control-section">
+                <button id="resetButton">Reset Canvas</button>
+            </div>
         </div>
-        
-        <div class="control-group">
-            <label for="brushType">Brush Type:</label>
-            <select id="brushType">
-                <option value="continuous">Continuous</option>
-                <option value="circle">Circle</option>
-                <option value="square">Square</option>
-            </select>
-        </div>
-        
-        <div class="control-group">
-            <label for="effectSelect">Effect:</label>
-            <select id="effectSelect">
-                <option value="none">No Effect</option>
-                <option value="blur">Blur</option>
-                <option value="sharpen">Sharpen</option>
-                <option value="edgeDetection">Edge Detection</option>
-            </select>
-            <input type="range" id="effectStrength" min="1" max="10" value="5">
-        </div>
-        
-        <div class="control-group">
-            <label for="bgColor">Background Color:</label>
-            <input type="color" id="bgColor" value="#ffffff">
-        </div>
-        
-        <div class="control-group">
-            <label for="imageInput">Picture:</label>
-            <input type="file" id="imageInput" accept="image/*">
-        </div>
-        
-        <div class="control-group">
-            <label for="samplingMethod">Sampling Method:</label>
-            <select id="samplingMethod">
-                <option value="normal">Normal</option>
-                <option value="vertical">Vertical</option>
-                <option value="horizontal">Horizontal</option>
-                <option value="random">Random</option>
-            </select>
-        </div>
-        
-        <div class="control-group">
-            <label for="samplingDirection">Sampling Direction:</label>
-            <select id="samplingDirection">
-                <option value="forward">Forward</option>
-                <option value="backward">Backward</option>
-            </select>
-        </div>
-        
-        <div class="control-group">
-            <button id="resetButton">Reset Canvas</button>
+
+        <div class="canvas-workspace">
+            <div class="canvas-wrapper">
+                <div class="canvas-label">Drawing</div>
+                <canvas id="canvas" width="800" height="600"></canvas>
+            </div>
+            <div class="canvas-wrapper">
+                <div class="canvas-label">Visualization</div>
+                <canvas id="imageVisualization" width="800" height="600"></canvas>
+            </div>
         </div>
     </div>
-    
-    <div class="visualization-container">
-        <canvas id="imageVisualization" width="800" height="600"></canvas>
-    </div>
-    
+
     <script src="app.js" type="application/javascript"></script>
 </body>
 </html>
