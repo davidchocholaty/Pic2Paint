@@ -2,20 +2,106 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <!--<meta name="viewport" content="width=device-width, initial-scale=1.0">-->
     <title>Pic2Paint - Drawing App</title>
-    <!--<link rel="stylesheet" href="../styles.css">  -->
     <link rel="icon" href="favicon.ico" type="image/x-icon">
+    <link rel="stylesheet" href="styles.css" type="text/css">
 </head>
 <body>
-    <h1>Image-Based Drawing App</h1>    
-    <canvas id="canvas" width="800" height="600" style="border:1px solid #000;"></canvas>
-    <br>
-    <label for="brushSize">Brush Size:</label>
-    <input type="range" id="brushSize" min="1" max="50" value="5">
-    <br><br>
-    <label for="bgColor">Background Color:</label>
-    <input type="color" id="bgColor" value="#ffffff">
+    <div class="header">
+        <h1>Pic2Paint</h1>
+        <p>Transform your images into artistic masterpieces</p>
+    </div>
+
+    <div class="app-container">
+        <div class="controls">
+            <div class="control-section">
+                <h2>Brush Settings</h2>
+                <div class="control-group">
+                    <label for="brushSize">Brush Size</label>
+                    <input type="range" id="brushSize" min="1" max="50" value="5">
+                </div>
+                <div class="control-group">
+                    <label for="brushType">Brush Type</label>
+                    <select id="brushType">
+                        <option value="continuous">Continuous</option>
+                        <option value="circle">Circle</option>
+                        <option value="square">Square</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="control-section">
+                <h2>Effects</h2>
+                <div class="control-group">
+                    <label for="effectSelect">Effect Type</label>
+                    <select id="effectSelect">
+                        <option value="none">No Effect</option>
+                        <option value="blur">Blur</option>
+                        <option value="sharpen">Sharpen</option>
+                        <option value="edgeDetection">Edge Detection</option>
+                    </select>
+                </div>
+                <div class="control-group">
+                    <label for="effectStrength">Effect Strength</label>
+                    <input type="range" id="effectStrength" min="1" max="10" value="5">
+                </div>
+            </div>
+
+            <div class="control-section">
+                <h2>Canvas Settings</h2>
+                <div class="control-group">
+                    <label for="bgColor">Background Color</label>
+                    <input type="color" id="bgColor" value="#ffffff">
+                </div>
+                <div class="control-group">
+                    <label for="imageInput">Upload Image</label>
+                    <input type="file" id="imageInput" accept="image/*">
+                </div>
+                <div class="control-group">
+                    <label>
+                        <input type="checkbox" id="showImageCheckbox">
+                        Show Image on Drawing
+                    </label>
+                </div>
+            </div>
+
+            <div class="control-section">
+                <h2>Sampling Options</h2>
+                <div class="control-group">
+                    <label for="samplingMethod">Method</label>
+                    <select id="samplingMethod">
+                        <option value="normal">Normal</option>
+                        <option value="vertical">Vertical</option>
+                        <option value="horizontal">Horizontal</option>
+                        <option value="random">Random</option>
+                    </select>
+                </div>
+                <div class="control-group">
+                    <label for="samplingDirection">Direction</label>
+                    <select id="samplingDirection">
+                        <option value="forward">Forward</option>
+                        <option value="backward">Backward</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="control-section">
+                <button id="resetButton">Reset Canvas</button>
+            </div>
+        </div>
+
+        <div class="canvas-workspace">
+            <div class="canvas-wrapper">
+                <div class="canvas-label">Drawing</div>
+                <canvas id="canvas" width="800" height="600"></canvas>
+            </div>
+            <div class="canvas-wrapper">
+                <div class="canvas-label">Visualization</div>
+                <canvas id="imageVisualization" width="800" height="600"></canvas>
+            </div>
+        </div>
+    </div>
+
     <script src="app.js" type="application/javascript"></script>
 </body>
 </html>
