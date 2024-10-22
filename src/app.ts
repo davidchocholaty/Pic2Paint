@@ -11,8 +11,6 @@ const samplingStartSelect = document.getElementById('samplingStart') as HTMLSele
 const samplingDirectionSelect = document.getElementById('samplingDirection') as HTMLSelectElement;
 let currentColumn: number = 0;
 let currentRow: number = 0;
-let currentDiagonal: number = 0;
-let diagonalOffset: number = 0;
 let columnDirection: 'down' | 'up' = 'down';
 
 const ctx = canvas.getContext('2d')!;
@@ -26,7 +24,7 @@ let bgColor: string = '#ffffff';
 let brushType: 'circle' | 'square' | 'continuous' = 'continuous';
 let currentEffect: 'none' | 'blur' | 'sharpen' | 'edgeDetection' = 'none';
 let effectStrength: number = 5;
-let samplingMethod: 'normal' | 'vertical' | 'horizontal' | 'diagonal' | 'random' = 'normal';
+let samplingMethod: 'normal' | 'vertical' | 'horizontal' | 'random' = 'normal';
 let samplingStart: 'topLeft' | 'topRight' | 'bottomLeft' | 'bottomRight' = 'topLeft';
 let samplingDirection: 'forward' | 'backward' = 'forward';
 let samplingOffset: number = 0;
@@ -76,7 +74,7 @@ effectStrengthInput.addEventListener('input', () => {
 
 // Update sampling method when select changes
 samplingMethodSelect.addEventListener('change', () => {
-    samplingMethod = samplingMethodSelect.value as 'normal' | 'vertical' | 'horizontal' | 'diagonal' | 'random';
+    samplingMethod = samplingMethodSelect.value as 'normal' | 'vertical' | 'horizontal' | 'random';
     samplingOffset = 0; // Reset offset when changing method
 });
 
@@ -262,40 +260,6 @@ function sampleImage(ctx: CanvasRenderingContext2D, sourceX: number, sourceY: nu
             startY = currentRow * sourceHeight;
             ctx.drawImage(originalImage, samplingOffset, startY, sourceWidth, sourceHeight, 0, 0, brushSize, brushSize);
             break;
-        case 'diagonal':
-            diagonalOffset += offsetSpeed;
-            const maxDiagonalLength = Math.min(originalImage.width, originalImage.height);
-            
-            if (diagonalOffset >= maxDiagonalLength) {
-                // Move to the next diagonal
-                currentDiagonal += directionX;
-                if (currentDiagonal >= originalImage.width + originalImage.height - 1 || currentDiagonal < 0) {
-                    // Wrap around to the first/last diagonal
-                    currentDiagonal = directionX > 0 ? 0 : originalImage.width + originalImage.height - 2;
-                }
-                // Reset the diagonal offset
-                diagonalOffset = 0;
-            }
-
-            let x, y;
-            if (currentDiagonal < originalImage.height) {
-                x = 0;
-                y = currentDiagonal;
-            } else {
-                x = currentDiagonal - originalImage.height + 1;
-                y = originalImage.height - 1;
-            }
-
-            // Apply offset along the diagonal
-            x += diagonalOffset * directionX;
-            y -= diagonalOffset * directionY;
-
-            // Ensure we don't go out of bounds
-            x = Math.max(0, Math.min(x, originalImage.width - sourceWidth));
-            y = Math.max(0, Math.min(y, originalImage.height - sourceHeight));
-
-            ctx.drawImage(originalImage, x, y, sourceWidth, sourceHeight, 0, 0, brushSize, brushSize);
-            break;
         case 'random':
             ctx.drawImage(originalImage, 
                 Math.random() * (originalImage.width - sourceWidth), 
@@ -443,10 +407,6 @@ function updateVisualization(x: number, y: number) {
         case 'horizontal':
             currentX = (startX + samplingOffset) % originalImage.width;
             break;
-        case 'diagonal':
-            currentX = (startX + samplingOffset) % originalImage.width;
-            currentY = (startY + samplingOffset) % originalImage.height;
-            break;
         case 'random':
             currentX = Math.random() * (originalImage.width - sourceWidth);
             currentY = Math.random() * (originalImage.height - sourceHeight);
@@ -470,27 +430,6 @@ function updateVisualization(x: number, y: number) {
             case 'horizontal':
                 scaledX = samplingOffset * (imageVisualization.width / originalImage.width);
                 scaledY = currentRow * sourceHeight * (imageVisualization.height / originalImage.height);
-                break;
-            case 'diagonal':
-                let diagonalX, diagonalY;
-                if (currentDiagonal < originalImage.height) {
-                    diagonalX = 0;
-                    diagonalY = currentDiagonal;
-                } else {
-                    diagonalX = currentDiagonal - originalImage.height + 1;
-                    diagonalY = originalImage.height - 1;
-                }
-                
-                // Apply offset along the diagonal
-                diagonalX += diagonalOffset * (samplingDirection === 'forward' ? 1 : -1);
-                diagonalY -= diagonalOffset * (samplingDirection === 'forward' ? 1 : -1);
-
-                // Ensure we don't go out of bounds
-                diagonalX = Math.max(0, Math.min(diagonalX, originalImage.width - sourceWidth));
-                diagonalY = Math.max(0, Math.min(diagonalY, originalImage.height - sourceHeight));
-
-                scaledX = diagonalX * (imageVisualization.width / originalImage.width);
-                scaledY = diagonalY * (imageVisualization.height / originalImage.height);
                 break;
             default:
                 scaledX = currentX * (imageVisualization.width / originalImage.width);
@@ -526,10 +465,6 @@ function updateVisualization(x: number, y: number) {
             case 'horizontal':
                 endX += samplingDirection === 'forward' ? arrowSize : -arrowSize;
                 break;
-            case 'diagonal':
-                endX += samplingDirection === 'forward' ? arrowSize : -arrowSize;
-                endY += samplingDirection === 'forward' ? arrowSize : -arrowSize;
-                break;
         }
 
         visualizationCtx.lineTo(endX, endY);
@@ -553,19 +488,6 @@ function updateVisualization(x: number, y: number) {
             visualizationCtx.lineTo(
                 endX * (imageVisualization.width / originalImage.width) - (samplingDirection === 'forward' ? -5 : 5),
                 (currentY + sourceHeight / 2 + 5) * (imageVisualization.height / originalImage.height)
-            );
-        } else if (samplingMethod === 'diagonal') {
-            visualizationCtx.moveTo(
-                endX * (imageVisualization.width / originalImage.width) - (samplingDirection === 'forward' ? -5 : 5),
-                endY * (imageVisualization.height / originalImage.height) - (samplingDirection === 'forward' ? -5 : 5)
-            );
-            visualizationCtx.lineTo(
-                endX * (imageVisualization.width / originalImage.width),
-                endY * (imageVisualization.height / originalImage.height)
-            );
-            visualizationCtx.lineTo(
-                endX * (imageVisualization.width / originalImage.width) - (samplingDirection === 'forward' ? -5 : 5),
-                endY * (imageVisualization.height / originalImage.height) + (samplingDirection === 'forward' ? 5 : -5)
             );
         }
         visualizationCtx.fill();
@@ -668,10 +590,9 @@ function resetCanvas() {
     // Reset sampling variables
     samplingOffset = 0;
     currentColumn = 0;
-    currentRow = 0;
-    currentDiagonal = 0;
-    diagonalOffset = 0;
-    columnDirection = 'down';
+    currentRow = 0;    
+    columnDirection = 'down';    
+    samplingOffset = 0;    
 }
 
 // Add a reset button event listener
