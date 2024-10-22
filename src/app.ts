@@ -13,9 +13,11 @@ let brushBorderCtx: CanvasRenderingContext2D;
 let currentColumn: number = 0;
 let currentRow: number = 0;
 let columnDirection: 'down' | 'up' = 'down';
+let showImageOnCanvas: boolean = false;
 
 const ctx = canvas.getContext('2d')!;
 const visualizationCtx = imageVisualization.getContext('2d')!;
+const showImageCheckbox = document.getElementById('showImageCheckbox') as HTMLInputElement;
 
 brushBorderCanvas = document.createElement('canvas');
 brushBorderCanvas.width = canvas.width;
@@ -91,6 +93,11 @@ samplingMethodSelect.addEventListener('change', () => {
 samplingDirectionSelect.addEventListener('change', () => {
     samplingDirection = samplingDirectionSelect.value as 'forward' | 'backward';
     samplingOffset = 0;
+});
+
+showImageCheckbox.addEventListener('change', (e) => {
+    showImageOnCanvas = (e.target as HTMLInputElement).checked;
+    resetCanvas(); // Redraw the canvas with the new setting
 });
 
 // Start drawing when mouse is down
@@ -524,9 +531,11 @@ imageInput.addEventListener('change', (event) => {
         originalImage.src = e.target!.result as string;
 
         originalImage.onload = () => {
-            // Resize and draw the image onto both canvases
-            resizeAndDrawImage(canvas, ctx);
+            // Always show image in visualization canvas
             resizeAndDrawImage(imageVisualization, visualizationCtx);
+            
+            // Only show in main canvas if the checkbox is checked
+            resizeAndDrawImage(canvas, ctx);
         };
     };
 
@@ -544,9 +553,16 @@ function resizeAndDrawImage(targetCanvas: HTMLCanvasElement, targetCtx: CanvasRe
     const offsetX = (targetCanvas.width - newWidth) / 2;
     const offsetY = (targetCanvas.height - newHeight) / 2;
 
-    // Clear the canvas and draw the image
+    // Clear the canvas
     targetCtx.clearRect(0, 0, targetCanvas.width, targetCanvas.height);
-    targetCtx.drawImage(originalImage, offsetX, offsetY, newWidth, newHeight);
+    
+    // Only draw the image if it's the visualization canvas or if showImageOnCanvas is true
+    if (targetCanvas === imageVisualization || (targetCanvas === canvas && showImageOnCanvas)) {
+        targetCtx.drawImage(originalImage, offsetX, offsetY, newWidth, newHeight);
+    } else {
+        // If it's the main canvas and we're not showing the image, set the background color
+        setBackgroundColor(bgColor);
+    }
 }
 
 // Modify the updateDrawingLayer function
@@ -578,10 +594,11 @@ function setBackgroundColor(color: string) {
 
 // Modify the resetCanvas function
 function resetCanvas() {
-    if (originalImage) {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    if (originalImage && showImageOnCanvas) {
         resizeAndDrawImage(canvas, ctx);
     } else {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
         setBackgroundColor(bgColor);
     }
     

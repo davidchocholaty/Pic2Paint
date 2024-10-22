@@ -1,19 +1,13 @@
 TODO pri zmene background se nezmeni to, co jiz bylo nakresleno
-TODO pri nahrani obrazku se obrazek nenahraje na prvni canvas
 TODO jestli funguje tlacitko reset canvas na vsechno a pokud ne tak fix
-TODO velikots kresliciho canvas vuci obrazku - asi automaticky nastavit
 TODO rozsahy popojizdecich veci a default hodnoty
-TODO jine zpracovani obrazku vstupniho nez 1:1
-- napriklad linearne pujde po radcich dle velikosti brushSize
-- nebo to stejne pro sloupce
-- nebo diagonalne
-- nebo zcela nahodne po obrazku
-TODO nejak pekne upravit css appky a nazev Pic2Paint
 TODO nejake tlacitko help (asi logo otazniku), ktere popise pouzivani aplikace s vyskakovacim oknem
-Jestli me neco napad z https://sedmicha.github.io/drippaint/
-TODO nejak zajistit, ze prvne je nutne nahrat obrazek, nez bude mozne kreslit
-TODO zoom in zoom out na input image
+TODO nejak zajistit, ze prvne je nutne nahrat obrazek, nez bude mozne kreslit - nebo nejakej text do canvasu, ze prvne se musi nahrat obrazek
+TODO zoom in zoom out na input image???
 TODO fix sipka rozhozena u vizualizace pro horizontalni sampling methodu
-TODO fix ze mi zmizelo ohraniceni kreslitka s novou verzi html jsem si toho vsiml
 TODO jestli nejak udelat ctrl-Z jako krok zpet
 TODO zmensit sirku aby se veslo na jednu obrazovku
+TODO ze se obrazek po nacteni resizuje zmenit. Mely by se canvas vejit na obrazoku, ale proporce zustat stejny.
+TODO clear canvas udelat popup okno: Are you sure? Current painting will be lost!
+TODO saving obrazku
+TODO ze pokud uzavru stranku, tak to zustane ulozene a po jejim opetovnem nacteni se to zase nahodi to stejne???

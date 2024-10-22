@@ -114,3 +114,18 @@ button:hover {
     color: #666;
     text-align: center;
 }
+
+.control-group {
+    margin: 10px 0;
+}
+
+.control-group label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+}
+
+#showImageCheckbox {
+    cursor: pointer;
+}
