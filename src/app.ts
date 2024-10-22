@@ -8,12 +8,24 @@ const effectSelect = document.getElementById('effectSelect') as HTMLSelectElemen
 const effectStrengthInput = document.getElementById('effectStrength') as HTMLInputElement;
 const samplingMethodSelect = document.getElementById('samplingMethod') as HTMLSelectElement;
 const samplingDirectionSelect = document.getElementById('samplingDirection') as HTMLSelectElement;
+let brushBorderCanvas: HTMLCanvasElement;
+let brushBorderCtx: CanvasRenderingContext2D;
 let currentColumn: number = 0;
 let currentRow: number = 0;
 let columnDirection: 'down' | 'up' = 'down';
 
 const ctx = canvas.getContext('2d')!;
 const visualizationCtx = imageVisualization.getContext('2d')!;
+
+brushBorderCanvas = document.createElement('canvas');
+brushBorderCanvas.width = canvas.width;
+brushBorderCanvas.height = canvas.height;
+brushBorderCanvas.style.position = 'absolute';
+brushBorderCanvas.style.pointerEvents = 'none';  // Make sure it doesn't interfere with mouse events
+brushBorderCanvas.style.left = canvas.offsetLeft + 'px';
+brushBorderCanvas.style.top = canvas.offsetTop + 'px';
+brushBorderCtx = brushBorderCanvas.getContext('2d')!;
+canvas.parentElement?.appendChild(brushBorderCanvas);
 
 let drawing = false;
 let lastX = 0;
@@ -111,10 +123,31 @@ canvas.addEventListener('mousemove', (e) => {
         lastSamplingTime = currentTime;
     }
     updateVisualization(e.offsetX, e.offsetY);
+    updateBrushBorder(e.offsetX, e.offsetY); // Add this line
 });
+
+function updateBrushBorder(x: number, y: number) {
+    brushBorderCtx.clearRect(0, 0, canvas.width, canvas.height);
+    brushBorderCtx.strokeStyle = 'red';
+    brushBorderCtx.lineWidth = 2;
+
+    if (brushType === 'circle' || brushType === 'continuous') {
+        brushBorderCtx.beginPath();
+        brushBorderCtx.arc(x, y, brushSize / 2, 0, Math.PI * 2);
+        brushBorderCtx.stroke();
+    } else if (brushType === 'square') {
+        brushBorderCtx.strokeRect(
+            x - brushSize / 2,
+            y - brushSize / 2,
+            brushSize,
+            brushSize
+        );
+    }
+}
 
 function stopDrawing() {
     drawing = false;
+    brushBorderCtx.clearRect(0, 0, canvas.width, canvas.height);
 }
 
 function drawShape(x: number, y: number, speed: number) {
@@ -553,7 +586,10 @@ function resetCanvas() {
     }
     
     // Clear the drawing layer
-    initDrawingLayer(); // This reinitializes the drawing layer to a blank state
+    initDrawingLayer();
+    
+    // Clear the brush border
+    brushBorderCtx.clearRect(0, 0, canvas.width, canvas.height);
     
     // Reset sampling variables
     samplingOffset = 0;
@@ -571,4 +607,9 @@ resetButton.addEventListener('click', resetCanvas);
 // Add mousemove event listener to canvas to update visualization even when not drawing
 canvas.addEventListener('mousemove', (e) => {
     updateVisualization(e.offsetX, e.offsetY);
+});
+
+window.addEventListener('resize', () => {
+    brushBorderCanvas.style.left = canvas.offsetLeft + 'px';
+    brushBorderCanvas.style.top = canvas.offsetTop + 'px';
 });

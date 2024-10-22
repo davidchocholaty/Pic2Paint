@@ -15,3 +15,4 @@ TODO nejak zajistit, ze prvne je nutne nahrat obrazek, nez bude mozne kreslit
 TODO zoom in zoom out na input image
 TODO fix sipka rozhozena u vizualizace pro horizontalni sampling methodu
 TODO fix ze mi zmizelo ohraniceni kreslitka s novou verzi html jsem si toho vsiml
+TODO jestli nejak udelat ctrl-Z jako krok zpet
