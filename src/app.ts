@@ -7,7 +7,6 @@ const brushTypeSelect = document.getElementById('brushType') as HTMLSelectElemen
 const effectSelect = document.getElementById('effectSelect') as HTMLSelectElement;
 const effectStrengthInput = document.getElementById('effectStrength') as HTMLInputElement;
 const samplingMethodSelect = document.getElementById('samplingMethod') as HTMLSelectElement;
-const samplingStartSelect = document.getElementById('samplingStart') as HTMLSelectElement;
 const samplingDirectionSelect = document.getElementById('samplingDirection') as HTMLSelectElement;
 let currentColumn: number = 0;
 let currentRow: number = 0;
@@ -25,7 +24,6 @@ let brushType: 'circle' | 'square' | 'continuous' = 'continuous';
 let currentEffect: 'none' | 'blur' | 'sharpen' | 'edgeDetection' = 'none';
 let effectStrength: number = 5;
 let samplingMethod: 'normal' | 'vertical' | 'horizontal' | 'random' = 'normal';
-let samplingStart: 'topLeft' | 'topRight' | 'bottomLeft' | 'bottomRight' = 'topLeft';
 let samplingDirection: 'forward' | 'backward' = 'forward';
 let samplingOffset: number = 0;
 let lastSamplingTime: number = 0;
@@ -76,11 +74,6 @@ effectStrengthInput.addEventListener('input', () => {
 samplingMethodSelect.addEventListener('change', () => {
     samplingMethod = samplingMethodSelect.value as 'normal' | 'vertical' | 'horizontal' | 'random';
     samplingOffset = 0; // Reset offset when changing method
-});
-
-samplingStartSelect.addEventListener('change', () => {
-    samplingStart = samplingStartSelect.value as 'topLeft' | 'topRight' | 'bottomLeft' | 'bottomRight';
-    samplingOffset = 0;
 });
 
 samplingDirectionSelect.addEventListener('change', () => {
@@ -201,21 +194,6 @@ function drawPoint(x: number, y: number, speed: number) {
 function sampleImage(ctx: CanvasRenderingContext2D, sourceX: number, sourceY: number, sourceWidth: number, sourceHeight: number, speed: number) {
     const offsetSpeed = Math.ceil(speed * 50);
     let startX: number, startY: number, directionX: number, directionY: number;
-
-    switch (samplingStart) {
-        case 'topLeft':
-            [startX, startY] = [0, 0];
-            break;
-        case 'topRight':
-            [startX, startY] = [originalImage.width - sourceWidth, 0];
-            break;
-        case 'bottomLeft':
-            [startX, startY] = [0, originalImage.height - sourceHeight];
-            break;
-        case 'bottomRight':
-            [startX, startY] = [originalImage.width - sourceWidth, originalImage.height - sourceHeight];
-            break;
-    }
 
     switch (samplingDirection) {
         case 'forward':
@@ -381,25 +359,12 @@ function updateVisualization(x: number, y: number) {
     const sourceWidth = Math.ceil(brushSize * (originalImage.width / canvas.width));
     const sourceHeight = Math.ceil(brushSize * (originalImage.height / canvas.height));
 
-    let startX: number, startY: number;
-    switch (samplingStart) {
-        case 'topLeft':
-            [startX, startY] = [0, 0];
-            break;
-        case 'topRight':
-            [startX, startY] = [originalImage.width - sourceWidth, 0];
-            break;
-        case 'bottomLeft':
-            [startX, startY] = [0, originalImage.height - sourceHeight];
-            break;
-        case 'bottomRight':
-            [startX, startY] = [originalImage.width - sourceWidth, originalImage.height - sourceHeight];
-            break;
-    }
+    let startX: number = 0;
+    let startY: number = 0;
 
     // Calculate current sampling position based on offset
-    let currentX = startX;
-    let currentY = startY;
+    let currentX = 0;
+    let currentY = 0;
     switch (samplingMethod) {
         case 'vertical':
             currentY = (startY + samplingOffset) % originalImage.height;
