@@ -673,7 +673,6 @@ function setBackgroundColor(color: string) {
 
 // Modify the resetCanvas function
 function resetCanvas() {
-    // Clear both the main canvas and the drawing layer immediately
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     initDrawingLayer();
     
@@ -683,25 +682,24 @@ function resetCanvas() {
         setBackgroundColor(bgColor);
     }
     
-    // Clear the brush border
     brushBorderCtx.clearRect(0, 0, canvas.width, canvas.height);
     
-    // Reset all sampling variables
     samplingOffset = 0;
     currentColumn = 0;
     currentRow = 0;    
     columnDirection = 'down';    
     
-    // Reset the history state immediately
     stateHistory = [];
     currentStateIndex = -1;
     updateHistoryButtons();
     
-    // Save the initial state of the cleared canvas
-    saveState();
-    
-    // Reset the drawing flag to prevent any ongoing drawing operations
     drawing = false;
+    
+    // Clear the saved state in localStorage when canvas is reset
+    clearSavedState();
+    
+    // Save the initial state
+    saveState();
 }
 
 // Add mousemove event listener to canvas to update visualization even when not drawing
@@ -712,4 +710,132 @@ canvas.addEventListener('mousemove', (e) => {
 window.addEventListener('resize', () => {
     brushBorderCanvas.style.left = canvas.offsetLeft + 'px';
     brushBorderCanvas.style.top = canvas.offsetTop + 'px';
+});
+
+function saveCanvasToLocalStorage() {
+    try {
+        // Save the main canvas state
+        const canvasDataUrl = canvas.toDataURL('image/png');
+        localStorage.setItem('savedCanvasState', canvasDataUrl);
+        
+        // Save the background color
+        localStorage.setItem('savedBgColor', bgColor);
+        
+        // Save other important state variables
+        const stateData = {
+            brushSize,
+            brushType,
+            currentEffect,
+            effectStrength,
+            samplingMethod,
+            samplingDirection,
+            showImageOnCanvas,
+        };
+        localStorage.setItem('savedStateData', JSON.stringify(stateData));
+        
+        // If there's an original image, save it too
+        if (originalImage) {
+            localStorage.setItem('savedOriginalImage', originalImage.src);
+        }
+        
+        console.log('Canvas state saved successfully');
+    } catch (error) {
+        console.error('Error saving canvas state:', error);
+    }
+}
+
+// Function to load canvas state from localStorage
+async function loadCanvasFromLocalStorage() {
+    try {
+        // Load the canvas state
+        const savedCanvasState = localStorage.getItem('savedCanvasState');
+        if (savedCanvasState) {
+            // Create a new image from the saved canvas data
+            const img = new Image();
+            img.src = savedCanvasState;
+            await new Promise((resolve) => {
+                img.onload = () => {
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    ctx.drawImage(img, 0, 0);
+                    // Update the drawing layer
+                    drawingLayer = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                    resolve(null);
+                };
+            });
+        }
+        
+        // Load and restore background color
+        const savedBgColor = localStorage.getItem('savedBgColor');
+        if (savedBgColor) {
+            bgColor = savedBgColor;
+            bgColorInput.value = bgColor;
+        }
+        
+        // Load other state variables
+        const savedStateData = localStorage.getItem('savedStateData');
+        if (savedStateData) {
+            const stateData = JSON.parse(savedStateData);
+            
+            // Restore brush settings
+            brushSize = stateData.brushSize;
+            brushSizeInput.value = brushSize.toString();
+            
+            brushType = stateData.brushType;
+            brushTypeSelect.value = brushType;
+            
+            currentEffect = stateData.currentEffect;
+            effectSelect.value = currentEffect;
+            
+            effectStrength = stateData.effectStrength;
+            effectStrengthInput.value = effectStrength.toString();
+            
+            samplingMethod = stateData.samplingMethod;
+            samplingMethodSelect.value = samplingMethod;
+            
+            samplingDirection = stateData.samplingDirection;
+            samplingDirectionSelect.value = samplingDirection;
+            
+            showImageOnCanvas = stateData.showImageOnCanvas;
+            showImageCheckbox.checked = showImageOnCanvas;
+        }
+        
+        // Load original image if it was saved
+        const savedOriginalImage = localStorage.getItem('savedOriginalImage');
+        if (savedOriginalImage) {
+            originalImage = new Image();
+            originalImage.src = savedOriginalImage;
+            await new Promise((resolve) => {
+                originalImage.onload = () => {
+                    resizeAndDrawImage(imageVisualization, visualizationCtx);
+                    if (showImageOnCanvas) {
+                        resizeAndDrawImage(canvas, ctx);
+                    }
+                    resolve(null);
+                };
+            });
+        }
+        
+        // Save initial state after loading
+        saveState();
+        console.log('Canvas state restored successfully');
+    } catch (error) {
+        console.error('Error loading canvas state:', error);
+    }
+}
+
+// Function to clear saved state
+function clearSavedState() {
+    localStorage.removeItem('savedCanvasState');
+    localStorage.removeItem('savedBgColor');
+    localStorage.removeItem('savedStateData');
+    localStorage.removeItem('savedOriginalImage');
+}
+
+// Add event listeners for page unload and load
+window.addEventListener('beforeunload', () => {
+    saveCanvasToLocalStorage();
+});
+
+window.addEventListener('load', async () => {
+    await loadCanvasFromLocalStorage();
 });
