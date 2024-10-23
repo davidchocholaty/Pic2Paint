@@ -129,3 +129,11 @@ button:hover {
 #showImageCheckbox {
     cursor: pointer;
 }
+
+.footer {
+    text-align: center;
+    padding: 20px;
+    margin-top: 40px;
+    border-top: 1px solid #eee;
+    color: #666;
+}
