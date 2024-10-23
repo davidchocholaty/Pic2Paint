@@ -7,4 +7,3 @@ TODO zmensit sirku aby se veslo na jednu obrazovku
 TODO ze se obrazek po nacteni resizuje zmenit. Mely by se canvas vejit na obrazoku, ale proporce zustat stejny.
 TODO saving obrazku
 TODO na mensi obrazovce se to nevleze na obrazovku - fixnout treba tim, ze sekce budou na rozkliknuti
-TODO jestli brush size default value se zobrazuje spravne
