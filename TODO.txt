@@ -1,4 +1,3 @@
-TODO fixnout v inspect, ze se da neco zrychlit
 TODO fix sipka rozhozena u vizualizace pro horizontalni sampling methodu
 TODO pri zmene background se nezmeni to, co jiz bylo nakresleno | nebo uplne odstranit background color
 TODO zmensit sirku aby se veslo na jednu obrazovku

@@ -22,7 +22,7 @@ let showImageOnCanvas: boolean = false;
 let stateHistory: ImageData[] = [];
 let currentStateIndex: number = -1;
 
-const ctx = canvas.getContext('2d')!;
+const ctx = canvas.getContext('2d', { willReadFrequently: true })!;
 const visualizationCtx = imageVisualization.getContext('2d')!;
 const showImageCheckbox = document.getElementById('showImageCheckbox') as HTMLInputElement;
 const MAX_HISTORY_STATES: number = 50; // Limit the number of stored states to prevent memory issues
