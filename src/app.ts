@@ -907,3 +907,53 @@ window.addEventListener('load', async () => {
     initCanvas();
     await loadCanvasFromLocalStorage();
 });
+
+interface HelpButtonConfig {
+    buttonId: string;
+    url: string;
+    openInNewTab?: boolean;
+}
+
+class HelpButton {
+    private button: HTMLElement | null;
+    private config: HelpButtonConfig;
+
+    constructor(config: HelpButtonConfig) {
+        this.config = {
+            openInNewTab: true,
+            ...config
+        };
+        this.button = document.getElementById(this.config.buttonId);
+        this.init();
+    }
+
+    private init(): void {
+        if (!this.button) {
+            console.error(`Button with id "${this.config.buttonId}" not found`);
+            return;
+        }
+
+        this.button.addEventListener('click', this.handleClick.bind(this));
+    }
+
+    private handleClick(event: Event): void {
+        event.preventDefault();
+        
+        if (this.config.openInNewTab) {
+            window.open(this.config.url, '_blank', 'noopener noreferrer');
+        } else {
+            window.location.href = this.config.url;
+        }
+    }
+
+    // Public method to update URL if needed
+    public updateUrl(newUrl: string): void {
+        this.config.url = newUrl;
+    }
+}
+
+// Initialize the button
+const helpButton = new HelpButton({
+    buttonId: 'helpButton',
+    url: 'https://github.com/davidchocholaty/Pic2Paint'
+});

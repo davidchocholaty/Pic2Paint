@@ -285,3 +285,43 @@ button {
     opacity: 0.5;
     cursor: not-allowed;
 }
+
+.help-button {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background-color: #3b82f6;
+    color: white;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 12px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    transition: background-color 0.2s ease, transform 0.2s ease;
+}
+
+.help-button:hover {
+    background-color: #2563eb;
+    transform: scale(1.05);
+}
+
+.help-button:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.5);
+}
+
+.help-button:active {
+    transform: scale(0.95);
+}
+
+/* For better accessibility */
+@media (prefers-reduced-motion: reduce) {
+    .help-button {
+        transition: none;
+    }
+}

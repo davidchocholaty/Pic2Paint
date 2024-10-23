@@ -1,7 +1,5 @@
-TODO pri zmene background se nezmeni to, co jiz bylo nakresleno | nebo uplne odstranit background color
 TODO zmensit sirku aby se veslo na jednu obrazovku
 TODO ze se obrazek po nacteni resizuje zmenit. Mely by se canvas vejit na obrazoku, ale proporce zustat stejny.
 TODO na mensi obrazovce se to nevleze na obrazovku na vysku - fixnout treba tim, ze sekce budou na rozkliknuti
 
-TODO zoom in zoom out na input image???
 TODO nejake tlacitko help (asi logo otazniku), ktere popise pouzivani aplikace s vyskakovacim oknem
