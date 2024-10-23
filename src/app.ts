@@ -10,6 +10,7 @@ const samplingMethodSelect = document.getElementById('samplingMethod') as HTMLSe
 const samplingDirectionSelect = document.getElementById('samplingDirection') as HTMLSelectElement;
 const undoButton = document.getElementById('undoButton') as HTMLButtonElement;
 const forwardButton = document.getElementById('forwardButton') as HTMLButtonElement;
+const resetButton = document.getElementById('resetButton') as HTMLButtonElement;
 
 let brushBorderCanvas: HTMLCanvasElement;
 let brushBorderCtx: CanvasRenderingContext2D;
@@ -143,6 +144,13 @@ canvas.addEventListener('mousemove', (e) => {
 
 undoButton.addEventListener('click', handleUndo);
 forwardButton.addEventListener('click', handleForward);
+
+resetButton.addEventListener('click', function(e: MouseEvent) {
+    e.preventDefault();
+    if (confirm("Are you sure you want to clear your drawing? This action cannot be undone.")) {
+        resetCanvas(); // Use the existing resetCanvas function
+    }
+});
 
 function saveState() {
     const currentState = ctx.getImageData(0, 0, canvas.width, canvas.height);
@@ -694,11 +702,6 @@ function resetCanvas() {
     // Save initial state
     saveState();
 }
-
-// Add a reset button event listener
-const resetButton = document.getElementById('resetButton') as HTMLButtonElement;
-resetButton.addEventListener('click', resetCanvas);
-
 
 // Add mousemove event listener to canvas to update visualization even when not drawing
 canvas.addEventListener('mousemove', (e) => {
