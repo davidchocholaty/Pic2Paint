@@ -4,7 +4,6 @@ TODO nejake tlacitko help (asi logo otazniku), ktere popise pouzivani aplikace s
 TODO nejak zajistit, ze prvne je nutne nahrat obrazek, nez bude mozne kreslit - nebo nejakej text do canvasu, ze prvne se musi nahrat obrazek
 TODO zoom in zoom out na input image???
 TODO fix sipka rozhozena u vizualizace pro horizontalni sampling methodu
-TODO jestli nejak udelat ctrl-Z jako krok zpet
 TODO zmensit sirku aby se veslo na jednu obrazovku
 TODO ze se obrazek po nacteni resizuje zmenit. Mely by se canvas vejit na obrazoku, ale proporce zustat stejny.
 TODO clear canvas udelat popup okno: Are you sure? Current painting will be lost!

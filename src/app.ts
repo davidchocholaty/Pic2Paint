@@ -9,6 +9,7 @@ const effectStrengthInput = document.getElementById('effectStrength') as HTMLInp
 const samplingMethodSelect = document.getElementById('samplingMethod') as HTMLSelectElement;
 const samplingDirectionSelect = document.getElementById('samplingDirection') as HTMLSelectElement;
 const undoButton = document.getElementById('undoButton') as HTMLButtonElement;
+const forwardButton = document.getElementById('forwardButton') as HTMLButtonElement;
 
 let brushBorderCanvas: HTMLCanvasElement;
 let brushBorderCtx: CanvasRenderingContext2D;
@@ -141,6 +142,7 @@ canvas.addEventListener('mousemove', (e) => {
 });
 
 undoButton.addEventListener('click', handleUndo);
+forwardButton.addEventListener('click', handleForward);
 
 function saveState() {
     const currentState = ctx.getImageData(0, 0, canvas.width, canvas.height);
@@ -158,8 +160,8 @@ function saveState() {
         currentStateIndex--;
     }
     
-    // Enable/disable undo button based on history
-    undoButton.disabled = currentStateIndex < 0;
+    // Update buttons state
+    updateHistoryButtons();
 }
 
 function handleUndo() {
@@ -173,9 +175,30 @@ function handleUndo() {
         // Update the drawing layer to match the canvas state
         drawingLayer = ctx.getImageData(0, 0, canvas.width, canvas.height);
         
-        // Disable undo button if we're at the beginning of history
-        undoButton.disabled = currentStateIndex <= 0;
+        // Update buttons state
+        updateHistoryButtons();
     }
+}
+
+function handleForward() {
+    if (currentStateIndex < stateHistory.length - 1) {
+        currentStateIndex++;
+        const nextState = stateHistory[currentStateIndex];
+        
+        // Restore the next state
+        ctx.putImageData(nextState, 0, 0);
+        
+        // Update the drawing layer to match the canvas state
+        drawingLayer = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        
+        // Update buttons state
+        updateHistoryButtons();
+    }
+}
+
+function updateHistoryButtons() {
+    undoButton.disabled = currentStateIndex <= 0;
+    forwardButton.disabled = currentStateIndex >= stateHistory.length - 1;
 }
 
 function updateBrushBorder(x: number, y: number) {
@@ -663,10 +686,10 @@ function resetCanvas() {
     columnDirection = 'down';    
     samplingOffset = 0;
     
-    // Clear history and disable undo button
+    // Clear history and disable both undo and forward buttons
     stateHistory = [];
     currentStateIndex = -1;
-    undoButton.disabled = true;
+    updateHistoryButtons();
     
     // Save initial state
     saveState();

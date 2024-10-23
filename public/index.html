@@ -86,11 +86,19 @@
             </div>
 
             <div class="control-section">
-                <button id="undoButton" class="btn" disabled>
-                    <span class="arrow-left"></span>
-                    Undo
-                </button>
-                <button id="resetButton" class="btn">Reset Canvas</button>
+                <div class="button-group">
+                    <div class="button-row">
+                        <button id="undoButton" class="btn" disabled>
+                            <span class="arrow-left"></span>
+                            Go Back
+                        </button>
+                        <button id="forwardButton" class="btn" disabled>
+                            Go Forward
+                            <span class="arrow-right"></span>
+                        </button>
+                    </div>
+                    <button id="resetButton" class="btn">Reset Canvas</button>                
+                </div>
             </div>
         </div>
 
