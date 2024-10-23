@@ -32,7 +32,7 @@ canvas.parentElement?.appendChild(brushBorderCanvas);
 let drawing = false;
 let lastX = 0;
 let lastY = 0;
-let brushSize: number = 5;
+let brushSize: number = 50;
 let bgColor: string = '#ffffff';
 let brushType: 'circle' | 'square' | 'continuous' = 'continuous';
 let currentEffect: 'none' | 'blur' | 'sharpen' | 'edgeDetection' = 'none';
