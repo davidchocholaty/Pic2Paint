@@ -1,6 +1,6 @@
+TODO fixnout v inspect, ze se da neco zrychlit
 TODO fix sipka rozhozena u vizualizace pro horizontalni sampling methodu
 TODO pri zmene background se nezmeni to, co jiz bylo nakresleno | nebo uplne odstranit background color
-TODO nejak zajistit, ze prvne je nutne nahrat obrazek, nez bude mozne kreslit - nebo nejakej text do canvasu, ze prvne se musi nahrat obrazek
 TODO zmensit sirku aby se veslo na jednu obrazovku
 TODO ze se obrazek po nacteni resizuje zmenit. Mely by se canvas vejit na obrazoku, ale proporce zustat stejny.
 TODO na mensi obrazovce se to nevleze na obrazovku na vysku - fixnout treba tim, ze sekce budou na rozkliknuti

@@ -40,7 +40,7 @@ canvas.parentElement?.appendChild(brushBorderCanvas);
 let drawing = false;
 let lastX = 0;
 let lastY = 0;
-let brushSize: number = 500;
+let brushSize: number = 50;
 let bgColor: string = '#ffffff';
 let brushType: 'circle' | 'square' | 'continuous' = 'continuous';
 let currentEffect: 'none' | 'blur' | 'sharpen' | 'edgeDetection' = 'none';
@@ -211,7 +211,14 @@ function updateHistoryButtons() {
 }
 
 function updateBrushBorder(x: number, y: number) {
+    // Clear previous brush border
     brushBorderCtx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    // Only draw brush border if an image is loaded
+    if (!originalImage) {
+        return;
+    }
+    
     brushBorderCtx.strokeStyle = 'red';
     brushBorderCtx.lineWidth = 2;
 
@@ -470,6 +477,11 @@ function applyConvolution(input: Uint8ClampedArray, output: Uint8ClampedArray, w
 }
 
 function updateVisualization(x: number, y: number) {
+    if (!originalImage) {
+        drawPromptText(visualizationCtx, imageVisualization);
+        return;
+    }
+    
     visualizationCtx.clearRect(0, 0, imageVisualization.width, imageVisualization.height);
     
     if (originalImage) {
@@ -623,6 +635,11 @@ imageInput.addEventListener('change', (event) => {
 });
 
 function resizeAndDrawImage(targetCanvas: HTMLCanvasElement, targetCtx: CanvasRenderingContext2D) {
+    if (!originalImage) {
+        drawPromptText(targetCtx, targetCanvas);
+        return;
+    }
+
     // Calculate the scaling factor to fit the image within the canvas
     const scale = Math.min(
         targetCanvas.width / originalImage.width,
@@ -677,7 +694,10 @@ function resetCanvas() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     initDrawingLayer();
     
-    if (originalImage && showImageOnCanvas) {
+    if (!originalImage) {
+        drawPromptText(ctx, canvas);
+        drawPromptText(visualizationCtx, imageVisualization);
+    } else if (originalImage && showImageOnCanvas) {
         resizeAndDrawImage(canvas, ctx);
     } else {
         setBackgroundColor(bgColor);
@@ -918,6 +938,22 @@ function saveDrawing() {
     }
 }
 
+function drawPromptText(targetCtx: CanvasRenderingContext2D, canvas: HTMLCanvasElement) {
+    targetCtx.save();
+    targetCtx.clearRect(0, 0, canvas.width, canvas.height);
+    targetCtx.fillStyle = '#666666';
+    targetCtx.font = '24px Arial';
+    targetCtx.textAlign = 'center';
+    targetCtx.textBaseline = 'middle';
+    targetCtx.fillText('Please upload the image first', canvas.width / 2, canvas.height / 2);
+    targetCtx.restore();
+}
+
+function initCanvas() {
+    drawPromptText(ctx, canvas);
+    drawPromptText(visualizationCtx, imageVisualization);
+}
+
 saveDrawingButton.addEventListener('click', saveDrawing);
 
 // Add event listeners for page unload and load
@@ -926,5 +962,6 @@ window.addEventListener('beforeunload', () => {
 });
 
 window.addEventListener('load', async () => {
+    initCanvas();
     await loadCanvasFromLocalStorage();
 });
