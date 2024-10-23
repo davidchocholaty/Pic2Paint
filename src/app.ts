@@ -1,6 +1,5 @@
 const canvas = document.getElementById('canvas') as HTMLCanvasElement;
 const brushSizeInput = document.getElementById('brushSize') as HTMLInputElement;
-const bgColorInput = document.getElementById('bgColor') as HTMLInputElement;
 const imageInput = document.getElementById('imageInput') as HTMLInputElement;
 const imageVisualization = document.getElementById('imageVisualization') as HTMLCanvasElement;
 const brushTypeSelect = document.getElementById('brushType') as HTMLSelectElement;
@@ -18,7 +17,6 @@ let brushBorderCtx: CanvasRenderingContext2D;
 let currentColumn: number = 0;
 let currentRow: number = 0;
 let columnDirection: 'down' | 'up' = 'down';
-let showImageOnCanvas: boolean = false;
 let stateHistory: ImageData[] = [];
 let currentStateIndex: number = -1;
 
@@ -41,7 +39,6 @@ let drawing = false;
 let lastX = 0;
 let lastY = 0;
 let brushSize: number = 50;
-let bgColor: string = '#ffffff';
 let brushType: 'circle' | 'square' | 'continuous' = 'continuous';
 let currentEffect: 'none' | 'blur' | 'sharpen' | 'edgeDetection' = 'none';
 let effectStrength: number = 5;
@@ -64,15 +61,6 @@ function initDrawingLayer() {
 
 // Call this function after canvas is initialized
 initDrawingLayer();
-
-// Set the initial background color when the page loads
-setBackgroundColor(bgColor);
-
-// Update background color when the color picker changes
-bgColorInput.addEventListener('input', () => {
-    bgColor = bgColorInput.value;
-    setBackgroundColor(bgColor);
-});
 
 // Update brush size when slider changes
 brushSizeInput.addEventListener('input', () => {
@@ -103,11 +91,6 @@ samplingMethodSelect.addEventListener('change', () => {
 samplingDirectionSelect.addEventListener('change', () => {
     samplingDirection = samplingDirectionSelect.value as 'forward' | 'backward';
     samplingOffset = 0;
-});
-
-showImageCheckbox.addEventListener('change', (e) => {
-    showImageOnCanvas = (e.target as HTMLInputElement).checked;
-    resetCanvas(); // Redraw the canvas with the new setting
 });
 
 // Start drawing when mouse is down
@@ -651,12 +634,9 @@ function resizeAndDrawImage(targetCanvas: HTMLCanvasElement, targetCtx: CanvasRe
     // Clear the canvas
     targetCtx.clearRect(0, 0, targetCanvas.width, targetCanvas.height);
     
-    // Only draw the image if it's the visualization canvas or if showImageOnCanvas is true
-    if (targetCanvas === imageVisualization || (targetCanvas === canvas && showImageOnCanvas)) {
+    // Only draw the image if it's the visualization canvas
+    if (targetCanvas === imageVisualization) {
         targetCtx.drawImage(originalImage, offsetX, offsetY, newWidth, newHeight);
-    } else {
-        // If it's the main canvas and we're not showing the image, set the background color
-        setBackgroundColor(bgColor);
     }
 }
 
@@ -695,10 +675,6 @@ function resetCanvas() {
     if (!originalImage) {
         drawPromptText(ctx, canvas);
         drawPromptText(visualizationCtx, imageVisualization);
-    } else if (originalImage && showImageOnCanvas) {
-        resizeAndDrawImage(canvas, ctx);
-    } else {
-        setBackgroundColor(bgColor);
     }
     
     brushBorderCtx.clearRect(0, 0, canvas.width, canvas.height);
@@ -737,9 +713,6 @@ function saveCanvasToLocalStorage() {
         const canvasDataUrl = canvas.toDataURL('image/png');
         localStorage.setItem('savedCanvasState', canvasDataUrl);
         
-        // Save the background color
-        localStorage.setItem('savedBgColor', bgColor);
-        
         // Save the history states
         const historyDataUrls = stateHistory.map(imageData => {
             const tempCanvas = document.createElement('canvas');
@@ -760,7 +733,6 @@ function saveCanvasToLocalStorage() {
             effectStrength,
             samplingMethod,
             samplingDirection,
-            showImageOnCanvas,
         };
         localStorage.setItem('savedStateData', JSON.stringify(stateData));
         
@@ -807,13 +779,6 @@ async function loadCanvasFromLocalStorage() {
             }
         }
         
-        // Load and restore background color
-        const savedBgColor = localStorage.getItem('savedBgColor');
-        if (savedBgColor) {
-            bgColor = savedBgColor;
-            bgColorInput.value = bgColor;
-        }
-        
         // Load other state variables
         const savedStateData = localStorage.getItem('savedStateData');
         if (savedStateData) {
@@ -837,9 +802,6 @@ async function loadCanvasFromLocalStorage() {
             
             samplingDirection = stateData.samplingDirection;
             samplingDirectionSelect.value = samplingDirection;
-            
-            showImageOnCanvas = stateData.showImageOnCanvas;
-            showImageCheckbox.checked = showImageOnCanvas;
         }
         
         // Load original image if it was saved
@@ -850,9 +812,6 @@ async function loadCanvasFromLocalStorage() {
             await new Promise((resolve) => {
                 originalImage.onload = () => {
                     resizeAndDrawImage(imageVisualization, visualizationCtx);
-                    if (showImageOnCanvas) {
-                        resizeAndDrawImage(canvas, ctx);
-                    }
                     resolve(null);
                 };
             });
@@ -869,7 +828,6 @@ async function loadCanvasFromLocalStorage() {
 // Function to clear saved state
 function clearSavedState() {
     localStorage.removeItem('savedCanvasState');
-    localStorage.removeItem('savedBgColor');
     localStorage.removeItem('savedStateData');
     localStorage.removeItem('savedOriginalImage');
     localStorage.removeItem('savedStateHistory');
@@ -885,22 +843,8 @@ function saveDrawing() {
         const tempCtx = tempCanvas.getContext('2d')!;
 
         // Fill with background color
-        tempCtx.fillStyle = bgColor;
+        tempCtx.fillStyle = '#ffffff'; // Default white color
         tempCtx.fillRect(0, 0, canvas.width, canvas.height);
-
-        // If showing image, draw it first
-        if (showImageOnCanvas && originalImage) {
-            const scale = Math.min(
-                canvas.width / originalImage.width,
-                canvas.height / originalImage.height
-            );
-            const newWidth = originalImage.width * scale;
-            const newHeight = originalImage.height * scale;
-            const offsetX = (canvas.width - newWidth) / 2;
-            const offsetY = (canvas.height - newHeight) / 2;
-            
-            tempCtx.drawImage(originalImage, offsetX, offsetY, newWidth, newHeight);
-        }
 
         // Draw the current canvas content
         tempCtx.drawImage(canvas, 0, 0);

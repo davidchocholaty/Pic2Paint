@@ -15,6 +15,14 @@
     <div class="app-container">
         <div class="controls">
             <div class="control-section">
+                <h2>Canvas Settings</h2>
+                <div class="control-group">
+                    <label for="imageInput">Upload Image</label>
+                    <input type="file" id="imageInput" accept="image/*">
+                </div>                
+            </div>
+
+            <div class="control-section">
                 <h2>Brush Settings</h2>
                 <div class="control-group">
                     <label for="brushSize">Brush Size</label>
@@ -48,25 +56,6 @@
             </div>
 
             <div class="control-section">
-                <h2>Canvas Settings</h2>
-                <div class="control-group">
-                    <label for="bgColor">Background Color</label>
-                    <input type="color" id="bgColor" value="#ffffff">
-                </div>
-                <div class="control-group">
-                    <label for="imageInput">Upload Image</label>
-                    <input type="file" id="imageInput" accept="image/*">
-                </div>
-                <div class="control-group">
-                    <label>
-                        <input type="checkbox" id="showImageCheckbox">
-                        Show Image on Drawing
-                    </label>
-                </div>
-                <button id="saveDrawingButton" class="btn">Save Drawing</button>
-            </div>
-
-            <div class="control-section">
                 <h2>Sampling Options</h2>
                 <div class="control-group">
                     <label for="samplingMethod">Method</label>
@@ -87,6 +76,7 @@
             </div>
 
             <div class="control-section">
+                <h2>Canvas Tools</h2>
                 <div class="button-group">
                     <div class="button-row">
                         <button id="undoButton" class="btn" disabled>
@@ -99,6 +89,7 @@
                         </button>
                     </div>
                     <button id="resetButton" class="btn">Clear Drawing</button>                     
+                    <button id="saveDrawingButton" class="btn">Save Drawing</button>
                 </div>
             </div>
         </div>
