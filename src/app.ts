@@ -673,7 +673,9 @@ function setBackgroundColor(color: string) {
 
 // Modify the resetCanvas function
 function resetCanvas() {
+    // Clear both the main canvas and the drawing layer immediately
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+    initDrawingLayer();
     
     if (originalImage && showImageOnCanvas) {
         resizeAndDrawImage(canvas, ctx);
@@ -681,26 +683,25 @@ function resetCanvas() {
         setBackgroundColor(bgColor);
     }
     
-    // Clear the drawing layer
-    initDrawingLayer();
-    
     // Clear the brush border
     brushBorderCtx.clearRect(0, 0, canvas.width, canvas.height);
     
-    // Reset sampling variables
+    // Reset all sampling variables
     samplingOffset = 0;
     currentColumn = 0;
     currentRow = 0;    
     columnDirection = 'down';    
-    samplingOffset = 0;
     
-    // Clear history and disable both undo and forward buttons
+    // Reset the history state immediately
     stateHistory = [];
     currentStateIndex = -1;
     updateHistoryButtons();
     
-    // Save initial state
+    // Save the initial state of the cleared canvas
     saveState();
+    
+    // Reset the drawing flag to prevent any ongoing drawing operations
+    drawing = false;
 }
 
 // Add mousemove event listener to canvas to update visualization even when not drawing
