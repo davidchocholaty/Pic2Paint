@@ -5,5 +5,6 @@ TODO zoom in zoom out na input image???
 TODO fix sipka rozhozena u vizualizace pro horizontalni sampling methodu
 TODO zmensit sirku aby se veslo na jednu obrazovku
 TODO ze se obrazek po nacteni resizuje zmenit. Mely by se canvas vejit na obrazoku, ale proporce zustat stejny.
-TODO saving obrazku
 TODO na mensi obrazovce se to nevleze na obrazovku - fixnout treba tim, ze sekce budou na rozkliknuti
+TODO kdyz se neco nakresli a pak se nacte obrazek na drawing, tak se vsechny kresleni smazou po opetovnem odstraneni obrazku pomoci checkboxu
+TODO border kolem canvasů

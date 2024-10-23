@@ -11,6 +11,7 @@ const samplingDirectionSelect = document.getElementById('samplingDirection') as 
 const undoButton = document.getElementById('undoButton') as HTMLButtonElement;
 const forwardButton = document.getElementById('forwardButton') as HTMLButtonElement;
 const resetButton = document.getElementById('resetButton') as HTMLButtonElement;
+const saveDrawingButton = document.getElementById('saveDrawingButton') as HTMLButtonElement;
 
 let brushBorderCanvas: HTMLCanvasElement;
 let brushBorderCtx: CanvasRenderingContext2D;
@@ -856,6 +857,68 @@ function clearSavedState() {
     localStorage.removeItem('savedStateHistory');
     localStorage.removeItem('savedStateIndex');
 }
+
+function saveDrawing() {
+    try {
+        // Create a temporary canvas to combine background and drawing
+        const tempCanvas = document.createElement('canvas');
+        tempCanvas.width = canvas.width;
+        tempCanvas.height = canvas.height;
+        const tempCtx = tempCanvas.getContext('2d')!;
+
+        // Fill with background color
+        tempCtx.fillStyle = bgColor;
+        tempCtx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // If showing image, draw it first
+        if (showImageOnCanvas && originalImage) {
+            const scale = Math.min(
+                canvas.width / originalImage.width,
+                canvas.height / originalImage.height
+            );
+            const newWidth = originalImage.width * scale;
+            const newHeight = originalImage.height * scale;
+            const offsetX = (canvas.width - newWidth) / 2;
+            const offsetY = (canvas.height - newHeight) / 2;
+            
+            tempCtx.drawImage(originalImage, offsetX, offsetY, newWidth, newHeight);
+        }
+
+        // Draw the current canvas content
+        tempCtx.drawImage(canvas, 0, 0);
+
+        // Create a download link
+        const link = document.createElement('a');
+        
+        // Generate timestamp for unique filename
+        const date = new Date();
+        const timestamp = date.toISOString().replace(/[:.]/g, '-');
+        const filename = `drawing-${timestamp}.png`;
+
+        // Convert canvas to blob
+        tempCanvas.toBlob((blob) => {
+            if (blob) {
+                const url = URL.createObjectURL(blob);
+                link.href = url;
+                link.download = filename;
+                
+                // Programmatically click the link to trigger download
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+
+                // Clean up the URL object
+                setTimeout(() => URL.revokeObjectURL(url), 100);
+            }
+        }, 'image/png');
+
+    } catch (error) {
+        console.error('Error saving drawing:', error);
+        alert('Failed to save the drawing. Please try again.');
+    }
+}
+
+saveDrawingButton.addEventListener('click', saveDrawing);
 
 // Add event listeners for page unload and load
 window.addEventListener('beforeunload', () => {

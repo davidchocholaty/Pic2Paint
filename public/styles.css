@@ -103,7 +103,14 @@ button {
 .button-group {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 10px;
+}
+
+.button-group button {
+    min-height: 40px;  /* Ensures all buttons have the same height */
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .button-row {
@@ -251,4 +258,21 @@ button {
     background-color: #dc3545;
     color: white;
     border: none;
+}
+
+#saveDrawingButton {
+    background: #2ecc71;  /* A fresh green color */
+}
+
+#saveDrawingButton:hover {
+    background: #27ae60;  /* Darker shade for hover state */
+}
+
+#saveDrawingButton:active {
+    background: #219a52;  /* Even darker for click state */
+}
+
+#saveDrawingButton:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
 }
