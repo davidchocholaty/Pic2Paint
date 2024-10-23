@@ -8,16 +8,21 @@ const effectSelect = document.getElementById('effectSelect') as HTMLSelectElemen
 const effectStrengthInput = document.getElementById('effectStrength') as HTMLInputElement;
 const samplingMethodSelect = document.getElementById('samplingMethod') as HTMLSelectElement;
 const samplingDirectionSelect = document.getElementById('samplingDirection') as HTMLSelectElement;
+const undoButton = document.getElementById('undoButton') as HTMLButtonElement;
+
 let brushBorderCanvas: HTMLCanvasElement;
 let brushBorderCtx: CanvasRenderingContext2D;
 let currentColumn: number = 0;
 let currentRow: number = 0;
 let columnDirection: 'down' | 'up' = 'down';
 let showImageOnCanvas: boolean = false;
+let stateHistory: ImageData[] = [];
+let currentStateIndex: number = -1;
 
 const ctx = canvas.getContext('2d')!;
 const visualizationCtx = imageVisualization.getContext('2d')!;
 const showImageCheckbox = document.getElementById('showImageCheckbox') as HTMLInputElement;
+const MAX_HISTORY_STATES: number = 50; // Limit the number of stored states to prevent memory issues
 
 brushBorderCanvas = document.createElement('canvas');
 brushBorderCanvas.width = canvas.width;
@@ -50,6 +55,8 @@ function initDrawingLayer() {
     for (let i = 0; i < drawingLayer.data.length; i += 4) {
         drawingLayer.data[i + 3] = 0; // Set alpha to 0 (transparent)
     }
+    // Save initial state
+    saveState();
 }
 
 // Call this function after canvas is initialized
@@ -133,6 +140,44 @@ canvas.addEventListener('mousemove', (e) => {
     updateBrushBorder(e.offsetX, e.offsetY); // Add this line
 });
 
+undoButton.addEventListener('click', handleUndo);
+
+function saveState() {
+    const currentState = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    
+    // Remove any states after the current index (in case we're undoing and then drawing)
+    stateHistory = stateHistory.slice(0, currentStateIndex + 1);
+    
+    // Add new state
+    stateHistory.push(currentState);
+    currentStateIndex++;
+    
+    // Remove oldest states if we exceed the maximum
+    if (stateHistory.length > MAX_HISTORY_STATES) {
+        stateHistory.shift();
+        currentStateIndex--;
+    }
+    
+    // Enable/disable undo button based on history
+    undoButton.disabled = currentStateIndex < 0;
+}
+
+function handleUndo() {
+    if (currentStateIndex > 0) {
+        currentStateIndex--;
+        const previousState = stateHistory[currentStateIndex];
+        
+        // Restore the previous state
+        ctx.putImageData(previousState, 0, 0);
+        
+        // Update the drawing layer to match the canvas state
+        drawingLayer = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        
+        // Disable undo button if we're at the beginning of history
+        undoButton.disabled = currentStateIndex <= 0;
+    }
+}
+
 function updateBrushBorder(x: number, y: number) {
     brushBorderCtx.clearRect(0, 0, canvas.width, canvas.height);
     brushBorderCtx.strokeStyle = 'red';
@@ -153,6 +198,9 @@ function updateBrushBorder(x: number, y: number) {
 }
 
 function stopDrawing() {
+    if (drawing) {
+        saveState();
+    }
     drawing = false;
     brushBorderCtx.clearRect(0, 0, canvas.width, canvas.height);
 }
@@ -613,7 +661,15 @@ function resetCanvas() {
     currentColumn = 0;
     currentRow = 0;    
     columnDirection = 'down';    
-    samplingOffset = 0;    
+    samplingOffset = 0;
+    
+    // Clear history and disable undo button
+    stateHistory = [];
+    currentStateIndex = -1;
+    undoButton.disabled = true;
+    
+    // Save initial state
+    saveState();
 }
 
 // Add a reset button event listener

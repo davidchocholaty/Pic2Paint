@@ -11,3 +11,4 @@ TODO clear canvas udelat popup okno: Are you sure? Current painting will be lost
 TODO saving obrazku
 TODO ze pokud uzavru stranku, tak to zustane ulozene a po jejim opetovnem nacteni se to zase nahodi to stejne???
 TODO na mensi obrazovce se to nevleze na obrazovku - fixnout treba tim, ze sekce budou na rozkliknuti
+TODO jestli brush size default value se zobrazuje spravne

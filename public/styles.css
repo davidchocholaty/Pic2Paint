@@ -90,17 +90,14 @@ input[type="file"] {
 
 button {
     width: 100%;
-    padding: 12px;
-    background: #3498db;
+    padding: 12px;    
     color: white;
     border: none;
     border-radius: 5px;
     cursor: pointer;
     transition: background 0.3s;
-}
-
-button:hover {
-    background: #2980b9;
+    margin-top: 4px;
+    margin-bottom: 4px;
 }
 
 .canvas-wrapper {
@@ -136,4 +133,34 @@ button:hover {
     margin-top: 40px;
     border-top: 1px solid #eee;
     color: #666;
+}
+
+#resetButton {
+    background: #e74c3c;
+}
+
+#undoButton {
+    background: #3498db;
+}
+
+#undoButton:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+#undoButton:hover {
+    background: #2980b9;
+}
+
+#resetButton:hover {
+    background: #b92e29;
+}
+
+.arrow-left {
+    width: 10px;
+    height: 10px;
+    border-top: 2px solid currentColor;
+    border-left: 2px solid currentColor;
+    transform: rotate(-45deg);
+    display: inline-block;
 }
