@@ -1,4 +1,4 @@
-TODO pri zmene background se nezmeni to, co jiz bylo nakresleno
+TODO pri zmene background se nezmeni to, co jiz bylo nakresleno | nebo uplne odstranit background color
 TODO nejake tlacitko help (asi logo otazniku), ktere popise pouzivani aplikace s vyskakovacim oknem
 TODO nejak zajistit, ze prvne je nutne nahrat obrazek, nez bude mozne kreslit - nebo nejakej text do canvasu, ze prvne se musi nahrat obrazek
 TODO zoom in zoom out na input image???

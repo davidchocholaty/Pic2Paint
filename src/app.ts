@@ -721,6 +721,18 @@ function saveCanvasToLocalStorage() {
         // Save the background color
         localStorage.setItem('savedBgColor', bgColor);
         
+        // Save the history states
+        const historyDataUrls = stateHistory.map(imageData => {
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = canvas.width;
+            tempCanvas.height = canvas.height;
+            const tempCtx = tempCanvas.getContext('2d')!;
+            tempCtx.putImageData(imageData, 0, 0);
+            return tempCanvas.toDataURL('image/png');
+        });
+        localStorage.setItem('savedStateHistory', JSON.stringify(historyDataUrls));
+        localStorage.setItem('savedStateIndex', currentStateIndex.toString());
+        
         // Save other important state variables
         const stateData = {
             brushSize,
@@ -747,21 +759,33 @@ function saveCanvasToLocalStorage() {
 // Function to load canvas state from localStorage
 async function loadCanvasFromLocalStorage() {
     try {
-        // Load the canvas state
-        const savedCanvasState = localStorage.getItem('savedCanvasState');
-        if (savedCanvasState) {
-            // Create a new image from the saved canvas data
-            const img = new Image();
-            img.src = savedCanvasState;
-            await new Promise((resolve) => {
-                img.onload = () => {
-                    ctx.clearRect(0, 0, canvas.width, canvas.height);
-                    ctx.drawImage(img, 0, 0);
-                    // Update the drawing layer
-                    drawingLayer = ctx.getImageData(0, 0, canvas.width, canvas.height);
-                    resolve(null);
-                };
-            });
+        // Load the history states first
+        const savedHistoryData = localStorage.getItem('savedStateHistory');
+        const savedStateIndex = localStorage.getItem('savedStateIndex');
+        
+        if (savedHistoryData && savedStateIndex) {
+            const historyDataUrls = JSON.parse(savedHistoryData);
+            currentStateIndex = parseInt(savedStateIndex, 10);
+            
+            // Convert data URLs back to ImageData
+            stateHistory = await Promise.all(historyDataUrls.map(async (dataUrl: string) => {
+                const img = new Image();
+                img.src = dataUrl;
+                await new Promise(resolve => { img.onload = resolve; });
+                
+                const tempCanvas = document.createElement('canvas');
+                tempCanvas.width = canvas.width;
+                tempCanvas.height = canvas.height;
+                const tempCtx = tempCanvas.getContext('2d')!;
+                tempCtx.drawImage(img, 0, 0);
+                return tempCtx.getImageData(0, 0, canvas.width, canvas.height);
+            }));
+            
+            // Restore the current state
+            if (stateHistory[currentStateIndex]) {
+                ctx.putImageData(stateHistory[currentStateIndex], 0, 0);
+                drawingLayer = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            }
         }
         
         // Load and restore background color
@@ -815,8 +839,8 @@ async function loadCanvasFromLocalStorage() {
             });
         }
         
-        // Save initial state after loading
-        saveState();
+        // Update the history buttons
+        updateHistoryButtons();
         console.log('Canvas state restored successfully');
     } catch (error) {
         console.error('Error loading canvas state:', error);
@@ -829,6 +853,8 @@ function clearSavedState() {
     localStorage.removeItem('savedBgColor');
     localStorage.removeItem('savedStateData');
     localStorage.removeItem('savedOriginalImage');
+    localStorage.removeItem('savedStateHistory');
+    localStorage.removeItem('savedStateIndex');
 }
 
 // Add event listeners for page unload and load
