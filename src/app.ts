@@ -577,19 +577,17 @@ function updateVisualization(x: number, y: number) {
             visualizationCtx.lineTo(endX, endY);
             visualizationCtx.lineTo(endX + 5, endY - (samplingDirection === 'forward' ? 5 : -5));
         } else if (samplingMethod === 'horizontal') {
-            visualizationCtx.moveTo(
-                endX * (imageVisualization.width / originalImage.width) - (samplingDirection === 'forward' ? -5 : 5),
-                (currentY + sourceHeight / 2 - 5) * (imageVisualization.height / originalImage.height)
-            );
-            visualizationCtx.lineTo(
-                endX * (imageVisualization.width / originalImage.width),
-                (currentY + sourceHeight / 2) * (imageVisualization.height / originalImage.height)
-            );
-            visualizationCtx.lineTo(
-                endX * (imageVisualization.width / originalImage.width) - (samplingDirection === 'forward' ? -5 : 5),
-                (currentY + sourceHeight / 2 + 5) * (imageVisualization.height / originalImage.height)
-            );
+            if (samplingDirection === 'forward') {
+                visualizationCtx.moveTo(endX - 5, endY - 5);  // Upper point
+                visualizationCtx.lineTo(endX, endY);          // Tip of arrow
+                visualizationCtx.lineTo(endX - 5, endY + 5);  // Lower point
+            } else {
+                visualizationCtx.moveTo(endX + 5, endY - 5);  // Upper point
+                visualizationCtx.lineTo(endX, endY);          // Tip of arrow
+                visualizationCtx.lineTo(endX + 5, endY + 5);  // Lower point
+            }
         }
+        
         visualizationCtx.fill();
     }
 
