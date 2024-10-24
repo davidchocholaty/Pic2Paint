@@ -7,21 +7,25 @@
 body {
     font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
     background-color: #f5f5f5;
-    padding: 20px;
+    min-height: 100vh;
     color: #333;
+    display: grid;
+    grid-template-columns: 300px 1fr;
 }
 
+/* Move header to right side */
 .header {
     text-align: center;
     padding: 20px 0;
+    grid-column: 2;
     margin-bottom: 30px;
 }
 
 .highlight {
-    font-style: italic; /* Italicize the "2" */
-    font-weight: bold;  /* Make it bold for emphasis */
-    color: #3498db;     /* Change the color to something eye-catching */
-    font-size: 1.2em;   /* Optional: make the "2" slightly larger */
+    font-style: italic;
+    font-weight: bold;
+    color: #3498db;
+    font-size: 1.2em;
 }
 
 .header h1 {
@@ -31,12 +35,47 @@ body {
     margin-bottom: 10px;
 }
 
+/* Adjust app container to not include the controls */
 .app-container {
-    max-width: 1800px;
-    margin: 0 auto;
-    display: grid;
-    grid-template-columns: 300px 1fr;
-    gap: 20px;
+    grid-column: 2;
+    padding: 0 20px;
+}
+
+/* Make controls panel full height */
+.controls {
+    background: white;
+    padding: 25px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    height: 100vh;
+    position: fixed;
+    width: 300px;
+    left: 0;
+    top: 0;
+    overflow-y: auto;
+}
+
+/* Add margin to first control section */
+.controls .control-section:first-child {
+    margin-top: 15px;
+}
+
+/* Custom scrollbar for controls */
+.controls::-webkit-scrollbar {
+    width: 8px;
+}
+
+.controls::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+
+.controls::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 4px;
+}
+
+.controls::-webkit-scrollbar-thumb:hover {
+    background: #555;
 }
 
 .canvas-workspace {
@@ -48,6 +87,15 @@ body {
     box-shadow: 0 2px 10px rgba(0,0,0,0.1);
 }
 
+/* Move footer to right side */
+.footer {
+    text-align: center;
+    padding: 20px;
+    border-top: 1px solid #eee;
+    color: #666;
+    grid-column: 2;
+}
+
 .canvas-container canvas {
     border: 2px solid black;
     border-radius: 5px;
@@ -56,13 +104,6 @@ body {
 #canvas, #imageVisualization {
     border: 1px solid black;  /* Black border around the canvases */
     border-radius: 5px;       /* Optional: Rounded corners */
-}
-
-.controls {
-    background: white;
-    padding: 25px;
-    border-radius: 10px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
 }
 
 .control-section {
@@ -171,14 +212,6 @@ button {
     align-items: center;
     gap: 8px;
     cursor: pointer;
-}
-
-.footer {
-    text-align: center;
-    padding: 20px;
-    margin-top: 40px;
-    border-top: 1px solid #eee;
-    color: #666;
 }
 
 #resetButton {
