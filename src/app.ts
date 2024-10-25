@@ -24,6 +24,9 @@ const ctx = canvas.getContext('2d', { willReadFrequently: true })!;
 const visualizationCtx = imageVisualization.getContext('2d')!;
 const showImageCheckbox = document.getElementById('showImageCheckbox') as HTMLInputElement;
 const MAX_HISTORY_STATES: number = 50; // Limit the number of stored states to prevent memory issues
+const MAX_PAGE_WIDTH = 0.95; // 95% of viewport width to leave some margin
+const LEFT_PANEL_WIDTH = 300; // Adjust this to match your actual left panel width
+const CANVAS_GAP = 20; // Gap between canvases
 
 brushBorderCanvas = document.createElement('canvas');
 brushBorderCanvas.width = canvas.width;
@@ -225,6 +228,56 @@ function stopDrawing() {
     }
     drawing = false;
     brushBorderCtx.clearRect(0, 0, canvas.width, canvas.height);
+}
+
+function calculateCanvasDimensions(imageWidth: number, imageHeight: number): { width: number; height: number } {
+    // Get viewport width
+    const viewportWidth = window.innerWidth;
+    
+    // Calculate maximum available width for both canvases
+    const maxAvailableWidth = (viewportWidth * MAX_PAGE_WIDTH) - LEFT_PANEL_WIDTH - CANVAS_GAP;
+    
+    // Each canvas can take up half of the available width
+    const maxCanvasWidth = (maxAvailableWidth / 2);
+    
+    // Calculate the dimensions while maintaining aspect ratio
+    const imageAspectRatio = imageWidth / imageHeight;
+    
+    let finalWidth: number;
+    let finalHeight: number;
+    
+    if (imageWidth > maxCanvasWidth) {
+        // If image is wider than available space, scale down
+        finalWidth = maxCanvasWidth;
+        finalHeight = finalWidth / imageAspectRatio;
+    } else {
+        // If image is smaller than available space, use original dimensions
+        finalWidth = imageWidth;
+        finalHeight = imageHeight;
+    }
+    
+    return { width: Math.floor(finalWidth), height: Math.floor(finalHeight) };
+}
+
+function resizeCanvases(width: number, height: number) {
+    // Resize main canvas
+    canvas.width = width;
+    canvas.height = height;
+    
+    // Resize visualization canvas
+    imageVisualization.width = width;
+    imageVisualization.height = height;
+    
+    // Resize brush border canvas
+    brushBorderCanvas.width = width;
+    brushBorderCanvas.height = height;
+    
+    // Update brush border canvas position
+    brushBorderCanvas.style.left = canvas.offsetLeft + 'px';
+    brushBorderCanvas.style.top = canvas.offsetTop + 'px';
+    
+    // Reinitialize drawing layer with new dimensions
+    initDrawingLayer();
 }
 
 function drawShape(x: number, y: number, speed: number) {
@@ -604,11 +657,19 @@ imageInput.addEventListener('change', (event) => {
         originalImage.src = e.target!.result as string;
 
         originalImage.onload = () => {
-            // Always show image in visualization canvas
-            resizeAndDrawImage(imageVisualization, visualizationCtx);
+            // Calculate new canvas dimensions based on image ratio and screen constraints
+            const dimensions = calculateCanvasDimensions(originalImage.width, originalImage.height);
             
-            // Only show in main canvas if the checkbox is checked
-            resizeAndDrawImage(canvas, ctx);
+            // Resize all canvases
+            resizeCanvases(dimensions.width, dimensions.height);
+            
+            // Draw image on visualization canvas
+            visualizationCtx.drawImage(originalImage, 0, 0, dimensions.width, dimensions.height);
+            
+            // Draw on main canvas if needed
+            if (showImageCheckbox.checked) {
+                ctx.drawImage(originalImage, 0, 0, dimensions.width, dimensions.height);
+            }
         };
     };
 
@@ -694,8 +755,19 @@ canvas.addEventListener('mousemove', (e) => {
 });
 
 window.addEventListener('resize', () => {
-    brushBorderCanvas.style.left = canvas.offsetLeft + 'px';
-    brushBorderCanvas.style.top = canvas.offsetTop + 'px';
+    if (originalImage) {
+        const dimensions = calculateCanvasDimensions(originalImage.width, originalImage.height);
+        resizeCanvases(dimensions.width, dimensions.height);
+        
+        // Redraw the image and content
+        visualizationCtx.drawImage(originalImage, 0, 0, dimensions.width, dimensions.height);
+        if (showImageCheckbox.checked) {
+            ctx.drawImage(originalImage, 0, 0, dimensions.width, dimensions.height);
+        }
+        
+        // Restore drawing layer
+        ctx.putImageData(drawingLayer, 0, 0);
+    }
 });
 
 function saveCanvasToLocalStorage() {
@@ -883,6 +955,11 @@ function drawPromptText(targetCtx: CanvasRenderingContext2D, canvas: HTMLCanvasE
 }
 
 function initCanvas() {
+    // Set initial canvas size
+    const initialDimensions = calculateCanvasDimensions(800, 600); // Default size
+    resizeCanvases(initialDimensions.width, initialDimensions.height);
+    
+    // Draw prompt text
     drawPromptText(ctx, canvas);
     drawPromptText(visualizationCtx, imageVisualization);
 }
