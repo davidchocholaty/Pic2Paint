@@ -314,13 +314,41 @@ function drawShape(x: number, y: number, speed: number) {
         tempCtx.fillRect(0, 0, brushSize, brushSize);
     }
 
-    // Draw at the correct position, handling edge cases
-    const drawX = Math.max(0, Math.min(x - brushSize / 2, canvas.width - brushSize));
-    const drawY = Math.max(0, Math.min(y - brushSize / 2, canvas.height - brushSize));
+    // Calculate the position where we want to draw
+    const drawX = x - brushSize / 2;
+    const drawY = y - brushSize / 2;
+
+    // Calculate how much of the brush should be drawn (for edge cases)
+    const sourceStartX = Math.max(0, -drawX);
+    const sourceStartY = Math.max(0, -drawY);
+    const sourceEndX = Math.min(brushSize, canvas.width - drawX);
+    const sourceEndY = Math.min(brushSize, canvas.height - drawY);
     
-    ctx.drawImage(tempCanvas, drawX, y - brushSize / 2);
-    updateDrawingLayer(drawX, y - brushSize / 2, brushSize, brushSize);
+    // Calculate where on the canvas to draw
+    const targetX = Math.max(0, drawX);
+    const targetY = Math.max(0, drawY);
+    
+    // Calculate the width and height of the area to draw
+    const drawWidth = sourceEndX - sourceStartX;
+    const drawHeight = sourceEndY - sourceStartY;
+
+    // Only draw if we have a valid area
+    if (drawWidth > 0 && drawHeight > 0) {
+        ctx.drawImage(
+            tempCanvas,
+            sourceStartX,
+            sourceStartY,
+            drawWidth,
+            drawHeight,
+            targetX,
+            targetY,
+            drawWidth,
+            drawHeight
+        );
+        updateDrawingLayer(targetX, targetY, drawWidth, drawHeight);
+    }
 }
+
 
 function drawLine(fromX: number, fromY: number, toX: number, toY: number, speed: number) {
     // Ensure coordinates are finite numbers
@@ -361,9 +389,9 @@ function drawPoint(x: number, y: number, speed: number) {
     tempCanvas.width = brushSize;
     tempCanvas.height = brushSize;
 
-    // Calculate draw coordinates with bounds checking
-    const drawX = Math.max(0, Math.min(x - brushSize / 2, canvas.width - brushSize));
-    const drawY = Math.max(0, Math.min(y - brushSize / 2, canvas.height - brushSize));
+    // Calculate draw coordinates
+    const drawX = x - brushSize / 2;
+    const drawY = y - brushSize / 2;
 
     // Use sampleImage for all sampling methods
     sampleImage(tempCtx, sourceX, sourceY, sourceWidth, sourceHeight, speed);
@@ -381,16 +409,38 @@ function drawPoint(x: number, y: number, speed: number) {
     tempCtx.arc(brushSize / 2, brushSize / 2, brushSize / 2, 0, Math.PI * 2);
     tempCtx.fill();
 
-    // Draw at the exact same position as visualization shows
-    ctx.drawImage(tempCanvas, drawX, drawY);
+    // Calculate the visible portion of the brush
+    const sourceStartX = Math.max(0, -drawX);
+    const sourceStartY = Math.max(0, -drawY);
+    const sourceEndX = Math.min(brushSize, canvas.width - drawX);
+    const sourceEndY = Math.min(brushSize, canvas.height - drawY);
     
-    // Only update drawing layer if coordinates are valid
-    if (drawX >= 0 && drawY >= 0 && 
-        drawX < canvas.width && drawY < canvas.height) {
-        updateDrawingLayer(drawX, drawY, brushSize, brushSize);
+    // Calculate where on the canvas to draw
+    const targetX = Math.max(0, drawX);
+    const targetY = Math.max(0, drawY);
+    
+    // Calculate the width and height of the area to draw
+    const drawWidth = sourceEndX - sourceStartX;
+    const drawHeight = sourceEndY - sourceStartY;
+
+    // Only draw if we have a valid area
+    if (drawWidth > 0 && drawHeight > 0) {
+        ctx.drawImage(
+            tempCanvas,
+            sourceStartX,
+            sourceStartY,
+            drawWidth,
+            drawHeight,
+            targetX,
+            targetY,
+            drawWidth,
+            drawHeight
+        );
+        
+        // Update drawing layer with the actual drawn area
+        updateDrawingLayer(targetX, targetY, drawWidth, drawHeight);
     }
 }
-
 
 function updateDrawingLayerPrecise(
     drawnContent: ImageData,
