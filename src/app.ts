@@ -260,11 +260,9 @@ function calculateCanvasDimensions(imageWidth: number, imageHeight: number): { w
 }
 
 function resizeCanvases(width: number, height: number) {
-    // Resize main canvas
+    // Resize main canvas and visualization canvas to exactly the same dimensions
     canvas.width = width;
     canvas.height = height;
-    
-    // Resize visualization canvas
     imageVisualization.width = width;
     imageVisualization.height = height;
     
@@ -272,12 +270,15 @@ function resizeCanvases(width: number, height: number) {
     brushBorderCanvas.width = width;
     brushBorderCanvas.height = height;
     
-    // Update brush border canvas position
+    // Update brush border canvas position to match main canvas
     brushBorderCanvas.style.left = canvas.offsetLeft + 'px';
     brushBorderCanvas.style.top = canvas.offsetTop + 'px';
     
-    // Reinitialize drawing layer with new dimensions
-    initDrawingLayer();
+    // Initialize drawing layer with new dimensions
+    drawingLayer = ctx.createImageData(width, height);
+    for (let i = 0; i < drawingLayer.data.length; i += 4) {
+        drawingLayer.data[i + 3] = 0; // Set alpha to 0 (transparent)
+    }
 }
 
 function drawShape(x: number, y: number, speed: number) {
@@ -334,17 +335,41 @@ function drawLine(fromX: number, fromY: number, toX: number, toY: number, speed:
 }
 
 function drawPoint(x: number, y: number, speed: number) {
-    const sourceX = Math.floor(x * (originalImage.width / canvas.width));
-    const sourceY = Math.floor(y * (originalImage.height / canvas.height));
-    const sourceWidth = Math.ceil(brushSize * (originalImage.width / canvas.width));
-    const sourceHeight = Math.ceil(brushSize * (originalImage.height / canvas.height));
+    // Calculate scaling factors for visualization to drawing alignment
+    const scaleX = originalImage.width / imageVisualization.width;
+    const scaleY = originalImage.height / imageVisualization.height;
+
+    // Calculate source coordinates from visualization space
+    const sourceX = Math.floor(x * scaleX);
+    const sourceY = Math.floor(y * scaleY);
+    const sourceWidth = Math.ceil(brushSize * scaleX);
+    const sourceHeight = Math.ceil(brushSize * scaleY);
 
     const tempCanvas = document.createElement('canvas');
     const tempCtx = tempCanvas.getContext('2d')!;
     tempCanvas.width = brushSize;
     tempCanvas.height = brushSize;
 
-    sampleImage(tempCtx, sourceX, sourceY, sourceWidth, sourceHeight, speed);
+    // Draw the sampled portion of the image
+    const drawX = x - brushSize / 2;
+    const drawY = y - brushSize / 2;
+
+    // Ensure we're not sampling outside the image bounds
+    const adjustedSourceX = Math.max(0, Math.min(sourceX - (sourceWidth / 2), originalImage.width - sourceWidth));
+    const adjustedSourceY = Math.max(0, Math.min(sourceY - (sourceHeight / 2), originalImage.height - sourceHeight));
+
+    // Sample the image using the adjusted coordinates
+    tempCtx.drawImage(
+        originalImage,
+        adjustedSourceX,
+        adjustedSourceY,
+        sourceWidth,
+        sourceHeight,
+        0,
+        0,
+        brushSize,
+        brushSize
+    );
 
     if (currentEffect !== 'none') {
         const imageData = tempCtx.getImageData(0, 0, brushSize, brushSize);
@@ -352,75 +377,63 @@ function drawPoint(x: number, y: number, speed: number) {
         tempCtx.putImageData(processedImageData, 0, 0);
     }
 
+    // Apply brush shape mask
     tempCtx.globalCompositeOperation = 'destination-in';
     tempCtx.fillStyle = 'black';
     tempCtx.beginPath();
     tempCtx.arc(brushSize / 2, brushSize / 2, brushSize / 2, 0, Math.PI * 2);
     tempCtx.fill();
 
-    ctx.drawImage(tempCanvas, x - brushSize / 2, y - brushSize / 2);
-    updateDrawingLayer(x - brushSize / 2, y - brushSize / 2, brushSize, brushSize);
+    // Draw at the exact same position as visualization shows
+    ctx.drawImage(tempCanvas, drawX, drawY);
+    updateDrawingLayer(drawX, drawY, brushSize, brushSize);
 }
+
 
 function sampleImage(ctx: CanvasRenderingContext2D, sourceX: number, sourceY: number, sourceWidth: number, sourceHeight: number, speed: number) {
     const offsetSpeed = Math.ceil(speed * 50);
-    let startX: number, startY: number, directionX: number, directionY: number;
 
-    // Clamp coordinates to ensure they stay within image boundaries
-    function clamp(value: number, min: number, max: number): number {
+    // Ensure we stay within image bounds
+    const clamp = (value: number, min: number, max: number): number => {
         return Math.min(Math.max(value, min), max);
-    }
+    };
 
-    // Adjust source coordinates and dimensions to stay within bounds
-    sourceX = clamp(sourceX, 0, originalImage.width);
-    sourceY = clamp(sourceY, 0, originalImage.height);
-
-    // Adjust width and height if they would go beyond the image boundaries
-    const maxWidth = originalImage.width - sourceX;
-    const maxHeight = originalImage.height - sourceY;
-    sourceWidth = Math.min(sourceWidth, maxWidth);
-    sourceHeight = Math.min(sourceHeight, maxHeight);
-
-    [startX, startY] = [0, 0];
-
-    switch (samplingDirection) {
-        case 'forward':
-            [directionX, directionY] = [1, 1];
-            break;
-        case 'backward':
-            [directionX, directionY] = [-1, -1];
-            break;
-    }
+    // Calculate scale factors based on visualization canvas
+    const scaleX = originalImage.width / imageVisualization.width;
+    const scaleY = originalImage.height / imageVisualization.height;
 
     switch (samplingMethod) {
         case 'normal':
-            ctx.drawImage(originalImage, sourceX, sourceY, sourceWidth, sourceHeight, 0, 0, brushSize, brushSize);
+            // Ensure sampling coordinates are within bounds
+            const adjustedX = clamp(sourceX - (sourceWidth / 2), 0, originalImage.width - sourceWidth);
+            const adjustedY = clamp(sourceY - (sourceHeight / 2), 0, originalImage.height - sourceHeight);
+            ctx.drawImage(originalImage, adjustedX, adjustedY, sourceWidth, sourceHeight, 0, 0, brushSize, brushSize);
             break;
             
         case 'vertical':
-            samplingOffset += offsetSpeed * directionY;
+            samplingOffset += offsetSpeed * (samplingDirection === 'forward' ? 1 : -1);
             if (samplingOffset >= originalImage.height || samplingOffset < 0) {
-                currentColumn += directionX;
+                currentColumn += (samplingDirection === 'forward' ? 1 : -1);
                 if (currentColumn >= Math.floor(originalImage.width / sourceWidth) || currentColumn < 0) {
-                    currentColumn = directionX > 0 ? 0 : Math.floor(originalImage.width / sourceWidth) - 1;
+                    currentColumn = samplingDirection === 'forward' ? 0 : Math.floor(originalImage.width / sourceWidth) - 1;
                 }
-                samplingOffset = directionY > 0 ? 0 : originalImage.height - sourceHeight;
+                samplingOffset = samplingDirection === 'forward' ? 0 : originalImage.height - sourceHeight;
             }
-            startX = clamp(currentColumn * sourceWidth, 0, originalImage.width - sourceWidth);
+            const startX = clamp(currentColumn * sourceWidth, 0, originalImage.width - sourceWidth);
             const verticalY = clamp(samplingOffset, 0, originalImage.height - sourceHeight);
             ctx.drawImage(originalImage, startX, verticalY, sourceWidth, sourceHeight, 0, 0, brushSize, brushSize);
             break;
             
         case 'horizontal':
-            samplingOffset += offsetSpeed * directionX;
+            samplingOffset += offsetSpeed * (samplingDirection === 'forward' ? 1 : -1);
             if (samplingOffset >= originalImage.width || samplingOffset < 0) {
-                currentRow += directionY;
+                currentRow += (samplingDirection === 'forward' ? 1 : -1);
                 if (currentRow >= Math.floor(originalImage.height / sourceHeight) || currentRow < 0) {
-                    currentRow = directionY > 0 ? 0 : Math.floor(originalImage.height / sourceHeight) - 1;
+                    currentRow = samplingDirection === 'forward' ? 0 : Math.floor(originalImage.height / sourceHeight) - 1;
                 }
-                samplingOffset = directionX > 0 ? 0 : originalImage.width - sourceWidth;
+                samplingOffset = samplingDirection === 'forward' ? 0 : originalImage.width - sourceWidth;
             }
-            startY = clamp(currentRow * sourceHeight, 0, originalImage.height - sourceHeight);
+            const startY = clamp(currentRow * sourceHeight, 0, originalImage.height - sourceHeight);
             const horizontalX = clamp(samplingOffset, 0, originalImage.width - sourceWidth);
             ctx.drawImage(originalImage, horizontalX, startY, sourceWidth, sourceHeight, 0, 0, brushSize, brushSize);
             break;
@@ -678,16 +691,20 @@ imageInput.addEventListener('change', (event) => {
         originalImage.src = e.target!.result as string;
 
         originalImage.onload = () => {
-            // Calculate new canvas dimensions based on image ratio and screen constraints
+            // Calculate dimensions that maintain aspect ratio
             const dimensions = calculateCanvasDimensions(originalImage.width, originalImage.height);
             
-            // Resize all canvases
+            // Resize both canvases to exactly the same dimensions
             resizeCanvases(dimensions.width, dimensions.height);
             
-            // Draw image on visualization canvas
+            // Clear both canvases
+            ctx.clearRect(0, 0, dimensions.width, dimensions.height);
+            visualizationCtx.clearRect(0, 0, dimensions.width, dimensions.height);
+            
+            // Draw the image on visualization canvas
             visualizationCtx.drawImage(originalImage, 0, 0, dimensions.width, dimensions.height);
             
-            // Draw on main canvas if needed
+            // Draw on main canvas if checkbox is checked
             if (showImageCheckbox.checked) {
                 ctx.drawImage(originalImage, 0, 0, dimensions.width, dimensions.height);
             }
@@ -703,21 +720,22 @@ function resizeAndDrawImage(targetCanvas: HTMLCanvasElement, targetCtx: CanvasRe
         return;
     }
 
-    // Calculate the scaling factor to fit the image within the canvas
+    // Calculate dimensions that maintain aspect ratio
     const scale = Math.min(
         targetCanvas.width / originalImage.width,
         targetCanvas.height / originalImage.height
     );
+
     const newWidth = originalImage.width * scale;
     const newHeight = originalImage.height * scale;
+
+    // Center the image
     const offsetX = (targetCanvas.width - newWidth) / 2;
     const offsetY = (targetCanvas.height - newHeight) / 2;
 
-    // Clear the canvas
     targetCtx.clearRect(0, 0, targetCanvas.width, targetCanvas.height);
     
-    // Only draw the image if it's the visualization canvas
-    if (targetCanvas === imageVisualization) {
+    if (targetCanvas === imageVisualization || (targetCanvas === canvas && showImageCheckbox.checked)) {
         targetCtx.drawImage(originalImage, offsetX, offsetY, newWidth, newHeight);
     }
 }
