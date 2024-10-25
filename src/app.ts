@@ -22,7 +22,6 @@ let currentStateIndex: number = -1;
 
 const ctx = canvas.getContext('2d', { willReadFrequently: true })!;
 const visualizationCtx = imageVisualization.getContext('2d')!;
-const showImageCheckbox = document.getElementById('showImageCheckbox') as HTMLInputElement;
 const MAX_HISTORY_STATES: number = 50; // Limit the number of stored states to prevent memory issues
 const MAX_PAGE_WIDTH = 0.95; // 95% of viewport width to leave some margin
 const LEFT_PANEL_WIDTH = 300; // Adjust this to match your actual left panel width
@@ -743,11 +742,6 @@ imageInput.addEventListener('change', (event) => {
             
             // Draw the image on visualization canvas
             visualizationCtx.drawImage(originalImage, 0, 0, dimensions.width, dimensions.height);
-            
-            // Draw on main canvas if checkbox is checked
-            if (showImageCheckbox.checked) {
-                ctx.drawImage(originalImage, 0, 0, dimensions.width, dimensions.height);
-            }
         };
     };
 
@@ -775,7 +769,7 @@ function resizeAndDrawImage(targetCanvas: HTMLCanvasElement, targetCtx: CanvasRe
 
     targetCtx.clearRect(0, 0, targetCanvas.width, targetCanvas.height);
     
-    if (targetCanvas === imageVisualization || (targetCanvas === canvas && showImageCheckbox.checked)) {
+    if (targetCanvas === imageVisualization) {
         targetCtx.drawImage(originalImage, offsetX, offsetY, newWidth, newHeight);
     }
 }
@@ -852,9 +846,6 @@ window.addEventListener('resize', () => {
         
         // Redraw the image and content
         visualizationCtx.drawImage(originalImage, 0, 0, dimensions.width, dimensions.height);
-        if (showImageCheckbox.checked) {
-            ctx.drawImage(originalImage, 0, 0, dimensions.width, dimensions.height);
-        }
         
         // Restore drawing layer
         ctx.putImageData(drawingLayer, 0, 0);
@@ -925,11 +916,6 @@ async function loadCanvasFromLocalStorage() {
                     
                     // Draw the image on visualization canvas
                     visualizationCtx.drawImage(originalImage, 0, 0, dimensions.width, dimensions.height);
-                    
-                    // Draw on main canvas if checkbox is checked
-                    if (showImageCheckbox.checked) {
-                        ctx.drawImage(originalImage, 0, 0, dimensions.width, dimensions.height);
-                    }
                     
                     resolve();
                 };
