@@ -8,17 +8,25 @@
 </head>
 <body>
     <div class="header">
-        <h1>Pic2Paint</h1>
-        <p>Transform your images into artistic masterpieces</p>
+        <h1>Pic<span class="highlight">2</span>Paint</h1>
+        <p>&#x1F3A8; Transform your images into artistic masterpieces &#x1F3A8;</p>
     </div>
 
     <div class="app-container">
         <div class="controls">
             <div class="control-section">
+                <h2>Canvas Settings</h2>
+                <div class="control-group">
+                    <label for="imageInput">Upload Image</label>
+                    <input type="file" id="imageInput" accept="image/*">
+                </div>                
+            </div>
+
+            <div class="control-section">
                 <h2>Brush Settings</h2>
                 <div class="control-group">
                     <label for="brushSize">Brush Size</label>
-                    <input type="range" id="brushSize" min="1" max="50" value="5">
+                    <input type="range" id="brushSize" min="1" max="500" value="50">
                 </div>
                 <div class="control-group">
                     <label for="brushType">Brush Type</label>
@@ -48,24 +56,6 @@
             </div>
 
             <div class="control-section">
-                <h2>Canvas Settings</h2>
-                <div class="control-group">
-                    <label for="bgColor">Background Color</label>
-                    <input type="color" id="bgColor" value="#ffffff">
-                </div>
-                <div class="control-group">
-                    <label for="imageInput">Upload Image</label>
-                    <input type="file" id="imageInput" accept="image/*">
-                </div>
-                <div class="control-group">
-                    <label>
-                        <input type="checkbox" id="showImageCheckbox">
-                        Show Image on Drawing
-                    </label>
-                </div>
-            </div>
-
-            <div class="control-section">
                 <h2>Sampling Options</h2>
                 <div class="control-group">
                     <label for="samplingMethod">Method</label>
@@ -86,7 +76,21 @@
             </div>
 
             <div class="control-section">
-                <button id="resetButton">Reset Canvas</button>
+                <h2>Canvas Tools</h2>
+                <div class="button-group">
+                    <div class="button-row">
+                        <button id="undoButton" class="btn" disabled>
+                            <span class="arrow-left"></span>
+                            Go Back
+                        </button>
+                        <button id="forwardButton" class="btn" disabled>
+                            Go Forward
+                            <span class="arrow-right"></span>
+                        </button>
+                    </div>
+                    <button id="resetButton" class="btn">Clear Drawing</button>                     
+                    <button id="saveDrawingButton" class="btn">Save Drawing</button>
+                </div>
             </div>
         </div>
 
@@ -101,6 +105,27 @@
             </div>
         </div>
     </div>
+    <button class="help-button" id="helpButton" aria-label="Help">
+        <svg 
+            xmlns="http://www.w3.org/2000/svg" 
+            width="24" 
+            height="24" 
+            viewBox="0 0 24 24" 
+            fill="none" 
+            stroke="currentColor" 
+            stroke-width="2" 
+            stroke-linecap="round" 
+            stroke-linejoin="round"
+        >
+            <circle cx="12" cy="12" r="10"></circle>
+            <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+            <line x1="12" y1="17" x2="12" y2="17"></line>
+        </svg>
+    </button>
+
+    <footer class="footer">
+        <p>&copy; 2024 Pic2Paint by David Chocholatý. All rights reserved.</p>
+    </footer>
 
     <script src="app.js" type="application/javascript"></script>
 </body>
