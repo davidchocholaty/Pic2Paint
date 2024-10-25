@@ -322,6 +322,12 @@ function drawShape(x: number, y: number, speed: number) {
 }
 
 function drawLine(fromX: number, fromY: number, toX: number, toY: number, speed: number) {
+    // Ensure coordinates are finite numbers
+    if (!Number.isFinite(fromX) || !Number.isFinite(fromY) || 
+        !Number.isFinite(toX) || !Number.isFinite(toY)) {
+        return;
+    }
+
     const distance = Math.sqrt((toX - fromX) ** 2 + (toY - fromY) ** 2);
     const steps = Math.ceil(distance);
 
@@ -329,11 +335,16 @@ function drawLine(fromX: number, fromY: number, toX: number, toY: number, speed:
         const t = i / steps;
         const x = fromX + (toX - fromX) * t;
         const y = fromY + (toY - fromY) * t;
-        drawPoint(x, y, speed);
+        drawPoint(Math.round(x), Math.round(y), speed);
     }
 }
 
 function drawPoint(x: number, y: number, speed: number) {
+    // Validate coordinates
+    if (!Number.isFinite(x) || !Number.isFinite(y)) {
+        return;
+    }
+
     // Calculate scaling factors for visualization to drawing alignment
     const scaleX = originalImage.width / imageVisualization.width;
     const scaleY = originalImage.height / imageVisualization.height;
@@ -349,9 +360,9 @@ function drawPoint(x: number, y: number, speed: number) {
     tempCanvas.width = brushSize;
     tempCanvas.height = brushSize;
 
-    // Draw the sampled portion of the image using the sampling method
-    const drawX = x - brushSize / 2;
-    const drawY = y - brushSize / 2;
+    // Calculate draw coordinates with bounds checking
+    const drawX = Math.max(0, Math.min(x - brushSize / 2, canvas.width - brushSize));
+    const drawY = Math.max(0, Math.min(y - brushSize / 2, canvas.height - brushSize));
 
     // Use sampleImage for all sampling methods
     sampleImage(tempCtx, sourceX, sourceY, sourceWidth, sourceHeight, speed);
@@ -371,7 +382,12 @@ function drawPoint(x: number, y: number, speed: number) {
 
     // Draw at the exact same position as visualization shows
     ctx.drawImage(tempCanvas, drawX, drawY);
-    updateDrawingLayer(drawX, drawY, brushSize, brushSize);
+    
+    // Only update drawing layer if coordinates are valid
+    if (drawX >= 0 && drawY >= 0 && 
+        drawX < canvas.width && drawY < canvas.height) {
+        updateDrawingLayer(drawX, drawY, brushSize, brushSize);
+    }
 }
 
 
@@ -776,33 +792,49 @@ function resizeAndDrawImage(targetCanvas: HTMLCanvasElement, targetCtx: CanvasRe
 
 // Modify the updateDrawingLayer function
 function updateDrawingLayer(x: number, y: number, width: number, height: number) {
+    // Validate all inputs are finite numbers
+    if (!Number.isFinite(x) || !Number.isFinite(y) || 
+        !Number.isFinite(width) || !Number.isFinite(height)) {
+        return;
+    }
+
     // Ensure coordinates and dimensions are valid
-    const safeX = Math.max(0, Math.min(x, canvas.width));
-    const safeY = Math.max(0, Math.min(y, canvas.height));
-    const safeWidth = Math.min(width, canvas.width - safeX);
-    const safeHeight = Math.min(height, canvas.height - safeY);
+    const safeX = Math.max(0, Math.min(Math.floor(x), canvas.width - 1));
+    const safeY = Math.max(0, Math.min(Math.floor(y), canvas.height - 1));
+    const safeWidth = Math.max(1, Math.min(Math.floor(width), canvas.width - safeX));
+    const safeHeight = Math.max(1, Math.min(Math.floor(height), canvas.height - safeY));
 
-    if (safeWidth <= 0 || safeHeight <= 0) return;
+    // Return early if dimensions are invalid
+    if (safeWidth <= 0 || safeHeight <= 0) {
+        return;
+    }
 
-    const drawnContent = ctx.getImageData(safeX, safeY, safeWidth, safeHeight);
-    
-    for (let row = 0; row < safeHeight; row++) {
-        for (let col = 0; col < safeWidth; col++) {
-            const sourceIndex = (row * safeWidth + col) * 4;
-            const targetX = safeX + col;
-            const targetY = safeY + row;
-            const targetIndex = (targetY * canvas.width + targetX) * 4;
+    try {
+        const drawnContent = ctx.getImageData(safeX, safeY, safeWidth, safeHeight);
+        
+        for (let row = 0; row < safeHeight; row++) {
+            for (let col = 0; col < safeWidth; col++) {
+                const sourceIndex = (row * safeWidth + col) * 4;
+                const targetX = safeX + col;
+                const targetY = safeY + row;
+                const targetIndex = (targetY * canvas.width + targetX) * 4;
 
-            // Only update if the pixel is not fully transparent
-            if (drawnContent.data[sourceIndex + 3] > 0) {
-                drawingLayer.data[targetIndex] = drawnContent.data[sourceIndex];
-                drawingLayer.data[targetIndex + 1] = drawnContent.data[sourceIndex + 1];
-                drawingLayer.data[targetIndex + 2] = drawnContent.data[sourceIndex + 2];
-                drawingLayer.data[targetIndex + 3] = drawnContent.data[sourceIndex + 3];
+                // Only update if the pixel is not fully transparent
+                if (drawnContent.data[sourceIndex + 3] > 0) {
+                    drawingLayer.data[targetIndex] = drawnContent.data[sourceIndex];
+                    drawingLayer.data[targetIndex + 1] = drawnContent.data[sourceIndex + 1];
+                    drawingLayer.data[targetIndex + 2] = drawnContent.data[sourceIndex + 2];
+                    drawingLayer.data[targetIndex + 3] = drawnContent.data[sourceIndex + 3];
+                }
             }
         }
+    } catch (error) {
+        console.error('Error updating drawing layer:', error);
+        console.log('Attempted coordinates:', { x, y, width, height });
+        console.log('Safe coordinates:', { safeX, safeY, safeWidth, safeHeight });
     }
 }
+
 
 // Modify the resetCanvas function
 function resetCanvas() {
