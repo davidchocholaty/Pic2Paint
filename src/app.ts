@@ -88,6 +88,7 @@ effectStrengthInput.addEventListener('input', () => {
 samplingMethodSelect.addEventListener('change', () => {
     samplingMethod = samplingMethodSelect.value as 'normal' | 'vertical' | 'horizontal' | 'random';
     samplingOffset = 0; // Reset offset when changing method
+    updateDirectionSelectVisibility(); // Add this line
 });
 
 samplingDirectionSelect.addEventListener('change', () => {
@@ -440,21 +441,21 @@ function getSourceSamplingRect(x: number, y: number, brushSize: number, original
 
 function sampleImage(ctx: CanvasRenderingContext2D, sourceX: number, sourceY: number, sourceWidth: number, sourceHeight: number, speed: number) {
     const offsetSpeed = Math.ceil(speed * 50);
-    let directionX: number, directionY: number;
+    let directionX: number = 1;
+    let directionY: number = 1;
+
+    // Set directions based on sampling direction only for vertical and horizontal methods
+    if (samplingMethod === 'vertical' || samplingMethod === 'horizontal') {
+        if (samplingDirection === 'backward') {
+            directionX = -1;
+            directionY = -1;
+        }
+    }
 
     // Ensure we stay within image bounds
     const clamp = (value: number, min: number, max: number): number => {
         return Math.min(Math.max(value, min), max);
     };
-
-    // Set directions based on sampling direction
-    if (samplingDirection === 'forward') {
-        directionX = 1;
-        directionY = 1;
-    } else {
-        directionX = -1;
-        directionY = -1;
-    }
 
     switch (samplingMethod) {
         case 'normal':
@@ -1165,4 +1166,19 @@ class HelpButton {
 const helpButton = new HelpButton({
     buttonId: 'helpButton',
     url: 'https://github.com/davidchocholaty/Pic2Paint'
+});
+
+function updateDirectionSelectVisibility() {
+    const method = samplingMethodSelect.value;
+    if (method === 'normal' || method === 'random') {
+        samplingDirectionSelect.disabled = true;
+        samplingDirectionSelect.style.opacity = '0.5';
+    } else {
+        samplingDirectionSelect.disabled = false;
+        samplingDirectionSelect.style.opacity = '1';
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    updateDirectionSelectVisibility();
 });
