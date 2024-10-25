@@ -281,10 +281,14 @@ function resizeCanvases(width: number, height: number) {
 }
 
 function drawShape(x: number, y: number, speed: number) {
-    const sourceX = Math.floor(x * (originalImage.width / canvas.width));
-    const sourceY = Math.floor(y * (originalImage.height / canvas.height));
-    const sourceWidth = Math.ceil(brushSize * (originalImage.width / canvas.width));
-    const sourceHeight = Math.ceil(brushSize * (originalImage.height / canvas.height));
+    // Calculate source coordinates with proper scaling
+    const scaleX = originalImage.width / canvas.width;
+    const scaleY = originalImage.height / canvas.height;
+    
+    const sourceX = Math.floor(x * scaleX);
+    const sourceY = Math.floor(y * scaleY);
+    const sourceWidth = Math.ceil(brushSize * scaleX);
+    const sourceHeight = Math.ceil(brushSize * scaleY);
 
     const tempCanvas = document.createElement('canvas');
     const tempCtx = tempCanvas.getContext('2d')!;
@@ -309,8 +313,12 @@ function drawShape(x: number, y: number, speed: number) {
         tempCtx.fillRect(0, 0, brushSize, brushSize);
     }
 
-    ctx.drawImage(tempCanvas, x - brushSize / 2, y - brushSize / 2);
-    updateDrawingLayer(x - brushSize / 2, y - brushSize / 2, brushSize, brushSize);
+    // Draw at the correct position, handling edge cases
+    const drawX = Math.max(0, Math.min(x - brushSize / 2, canvas.width - brushSize));
+    const drawY = Math.max(0, Math.min(y - brushSize / 2, canvas.height - brushSize));
+    
+    ctx.drawImage(tempCanvas, drawX, y - brushSize / 2);
+    updateDrawingLayer(drawX, y - brushSize / 2, brushSize, brushSize);
 }
 
 function drawLine(fromX: number, fromY: number, toX: number, toY: number, speed: number) {
@@ -358,6 +366,21 @@ function sampleImage(ctx: CanvasRenderingContext2D, sourceX: number, sourceY: nu
     const offsetSpeed = Math.ceil(speed * 50);
     let startX: number, startY: number, directionX: number, directionY: number;
 
+    // Clamp coordinates to ensure they stay within image boundaries
+    function clamp(value: number, min: number, max: number): number {
+        return Math.min(Math.max(value, min), max);
+    }
+
+    // Adjust source coordinates and dimensions to stay within bounds
+    sourceX = clamp(sourceX, 0, originalImage.width);
+    sourceY = clamp(sourceY, 0, originalImage.height);
+
+    // Adjust width and height if they would go beyond the image boundaries
+    const maxWidth = originalImage.width - sourceX;
+    const maxHeight = originalImage.height - sourceY;
+    sourceWidth = Math.min(sourceWidth, maxWidth);
+    sourceHeight = Math.min(sourceHeight, maxHeight);
+
     [startX, startY] = [0, 0];
 
     switch (samplingDirection) {
@@ -373,41 +396,39 @@ function sampleImage(ctx: CanvasRenderingContext2D, sourceX: number, sourceY: nu
         case 'normal':
             ctx.drawImage(originalImage, sourceX, sourceY, sourceWidth, sourceHeight, 0, 0, brushSize, brushSize);
             break;
+            
         case 'vertical':
             samplingOffset += offsetSpeed * directionY;
             if (samplingOffset >= originalImage.height || samplingOffset < 0) {
-                // Move to the next column
                 currentColumn += directionX;
                 if (currentColumn >= Math.floor(originalImage.width / sourceWidth) || currentColumn < 0) {
-                    // Wrap around to the first/last column
                     currentColumn = directionX > 0 ? 0 : Math.floor(originalImage.width / sourceWidth) - 1;
                 }
-                // Reset the vertical offset
                 samplingOffset = directionY > 0 ? 0 : originalImage.height - sourceHeight;
             }
-            startX = currentColumn * sourceWidth;
-            ctx.drawImage(originalImage, startX, samplingOffset, sourceWidth, sourceHeight, 0, 0, brushSize, brushSize);
+            startX = clamp(currentColumn * sourceWidth, 0, originalImage.width - sourceWidth);
+            const verticalY = clamp(samplingOffset, 0, originalImage.height - sourceHeight);
+            ctx.drawImage(originalImage, startX, verticalY, sourceWidth, sourceHeight, 0, 0, brushSize, brushSize);
             break;
+            
         case 'horizontal':
             samplingOffset += offsetSpeed * directionX;
             if (samplingOffset >= originalImage.width || samplingOffset < 0) {
-                // Move to the next row
                 currentRow += directionY;
                 if (currentRow >= Math.floor(originalImage.height / sourceHeight) || currentRow < 0) {
-                    // Wrap around to the first/last row
                     currentRow = directionY > 0 ? 0 : Math.floor(originalImage.height / sourceHeight) - 1;
                 }
-                // Reset the horizontal offset
                 samplingOffset = directionX > 0 ? 0 : originalImage.width - sourceWidth;
             }
-            startY = currentRow * sourceHeight;
-            ctx.drawImage(originalImage, samplingOffset, startY, sourceWidth, sourceHeight, 0, 0, brushSize, brushSize);
+            startY = clamp(currentRow * sourceHeight, 0, originalImage.height - sourceHeight);
+            const horizontalX = clamp(samplingOffset, 0, originalImage.width - sourceWidth);
+            ctx.drawImage(originalImage, horizontalX, startY, sourceWidth, sourceHeight, 0, 0, brushSize, brushSize);
             break;
+            
         case 'random':
-            ctx.drawImage(originalImage, 
-                Math.random() * (originalImage.width - sourceWidth), 
-                Math.random() * (originalImage.height - sourceHeight), 
-                sourceWidth, sourceHeight, 0, 0, brushSize, brushSize);
+            const randomX = clamp(Math.random() * (originalImage.width - sourceWidth), 0, originalImage.width - sourceWidth);
+            const randomY = clamp(Math.random() * (originalImage.height - sourceHeight), 0, originalImage.height - sourceHeight);
+            ctx.drawImage(originalImage, randomX, randomY, sourceWidth, sourceHeight, 0, 0, brushSize, brushSize);
             break;
     }
 }
