@@ -335,30 +335,32 @@ function drawLine(fromX: number, fromY: number, toX: number, toY: number, speed:
 }
 
 function drawPoint(x: number, y: number, speed: number) {
-    // Calculate scaling factors for visualization to drawing alignment
+    if (!originalImage) return;
+
+    // Calculate precise scaling factors
     const scaleX = originalImage.width / imageVisualization.width;
     const scaleY = originalImage.height / imageVisualization.height;
 
-    // Calculate source coordinates from visualization space
-    const sourceX = Math.floor(x * scaleX);
-    const sourceY = Math.floor(y * scaleY);
-    const sourceWidth = Math.ceil(brushSize * scaleX);
-    const sourceHeight = Math.ceil(brushSize * scaleY);
+    // Calculate source coordinates with proper rounding
+    const sourceX = Math.round(x * scaleX);
+    const sourceY = Math.round(y * scaleY);
+    const sourceWidth = Math.round(brushSize * scaleX);
+    const sourceHeight = Math.round(brushSize * scaleY);
 
     const tempCanvas = document.createElement('canvas');
     const tempCtx = tempCanvas.getContext('2d')!;
     tempCanvas.width = brushSize;
     tempCanvas.height = brushSize;
 
-    // Draw the sampled portion of the image
-    const drawX = x - brushSize / 2;
-    const drawY = y - brushSize / 2;
+    // Calculate draw position with proper rounding
+    const drawX = Math.round(x - brushSize / 2);
+    const drawY = Math.round(y - brushSize / 2);
 
-    // Ensure we're not sampling outside the image bounds
-    const adjustedSourceX = Math.max(0, Math.min(sourceX - (sourceWidth / 2), originalImage.width - sourceWidth));
-    const adjustedSourceY = Math.max(0, Math.min(sourceY - (sourceHeight / 2), originalImage.height - sourceHeight));
+    // Ensure sampling coordinates are within bounds and consistent
+    const adjustedSourceX = Math.max(0, Math.min(sourceX - Math.round(sourceWidth / 2), originalImage.width - sourceWidth));
+    const adjustedSourceY = Math.max(0, Math.min(sourceY - Math.round(sourceHeight / 2), originalImage.height - sourceHeight));
 
-    // Sample the image using the adjusted coordinates
+    // Sample the image using consistent coordinates
     tempCtx.drawImage(
         originalImage,
         adjustedSourceX,
@@ -371,77 +373,99 @@ function drawPoint(x: number, y: number, speed: number) {
         brushSize
     );
 
+    // Apply effects if needed
     if (currentEffect !== 'none') {
         const imageData = tempCtx.getImageData(0, 0, brushSize, brushSize);
         const processedImageData = applyEffect(imageData, currentEffect, effectStrength);
         tempCtx.putImageData(processedImageData, 0, 0);
     }
 
-    // Apply brush shape mask
+    // Apply brush shape mask with anti-aliasing
     tempCtx.globalCompositeOperation = 'destination-in';
     tempCtx.fillStyle = 'black';
     tempCtx.beginPath();
-    tempCtx.arc(brushSize / 2, brushSize / 2, brushSize / 2, 0, Math.PI * 2);
+
+    if (brushType === 'circle' || brushType === 'continuous') {
+        tempCtx.arc(brushSize / 2, brushSize / 2, brushSize / 2, 0, Math.PI * 2);
+    } else if (brushType === 'square') {
+        tempCtx.rect(0, 0, brushSize, brushSize);
+    }
+    
     tempCtx.fill();
 
-    // Draw at the exact same position as visualization shows
-    ctx.drawImage(tempCanvas, drawX, drawY);
-    updateDrawingLayer(drawX, drawY, brushSize, brushSize);
+    // Calculate the actual drawing bounds
+    const canvasRight = canvas.width - 1;
+    const canvasBottom = canvas.height - 1;
+    
+    // Ensure we don't draw outside the canvas
+    const finalDrawX = Math.max(0, Math.min(drawX, canvasRight - brushSize));
+    const finalDrawY = Math.max(0, Math.min(drawY, canvasBottom - brushSize));
+    
+    // Draw at the calculated position
+    ctx.drawImage(tempCanvas, finalDrawX, finalDrawY);
+    updateDrawingLayer(finalDrawX, finalDrawY, brushSize, brushSize);
 }
 
-
 function sampleImage(ctx: CanvasRenderingContext2D, sourceX: number, sourceY: number, sourceWidth: number, sourceHeight: number, speed: number) {
-    const offsetSpeed = Math.ceil(speed * 50);
+    if (!originalImage) return;
 
-    // Ensure we stay within image bounds
+    const offsetSpeed = Math.round(speed * 50);
+    
+    // Helper function to ensure consistent rounding
+    const roundToPixel = (value: number): number => Math.round(value);
+    
+    // Ensure we stay within image bounds with proper rounding
     const clamp = (value: number, min: number, max: number): number => {
-        return Math.min(Math.max(value, min), max);
+        return Math.round(Math.max(Math.min(value, max), min));
     };
 
-    // Calculate scale factors based on visualization canvas
+    // Calculate scale factors based on visualization canvas with proper rounding
     const scaleX = originalImage.width / imageVisualization.width;
     const scaleY = originalImage.height / imageVisualization.height;
 
+    // Ensure sampling width and height are consistent
+    const sampledWidth = roundToPixel(sourceWidth);
+    const sampledHeight = roundToPixel(sourceHeight);
+
     switch (samplingMethod) {
         case 'normal':
-            // Ensure sampling coordinates are within bounds
-            const adjustedX = clamp(sourceX - (sourceWidth / 2), 0, originalImage.width - sourceWidth);
-            const adjustedY = clamp(sourceY - (sourceHeight / 2), 0, originalImage.height - sourceHeight);
-            ctx.drawImage(originalImage, adjustedX, adjustedY, sourceWidth, sourceHeight, 0, 0, brushSize, brushSize);
+            const adjustedX = clamp(sourceX - roundToPixel(sourceWidth / 2), 0, originalImage.width - sampledWidth);
+            const adjustedY = clamp(sourceY - roundToPixel(sourceHeight / 2), 0, originalImage.height - sampledHeight);
+            ctx.drawImage(originalImage, adjustedX, adjustedY, sampledWidth, sampledHeight, 0, 0, brushSize, brushSize);
             break;
             
         case 'vertical':
-            samplingOffset += offsetSpeed * (samplingDirection === 'forward' ? 1 : -1);
+            samplingOffset = roundToPixel(samplingOffset + offsetSpeed * (samplingDirection === 'forward' ? 1 : -1));
             if (samplingOffset >= originalImage.height || samplingOffset < 0) {
-                currentColumn += (samplingDirection === 'forward' ? 1 : -1);
-                if (currentColumn >= Math.floor(originalImage.width / sourceWidth) || currentColumn < 0) {
-                    currentColumn = samplingDirection === 'forward' ? 0 : Math.floor(originalImage.width / sourceWidth) - 1;
+                currentColumn = roundToPixel(currentColumn + (samplingDirection === 'forward' ? 1 : -1));
+                if (currentColumn >= Math.floor(originalImage.width / sampledWidth) || currentColumn < 0) {
+                    currentColumn = samplingDirection === 'forward' ? 0 : Math.floor(originalImage.width / sampledWidth) - 1;
                 }
-                samplingOffset = samplingDirection === 'forward' ? 0 : originalImage.height - sourceHeight;
+                samplingOffset = samplingDirection === 'forward' ? 0 : originalImage.height - sampledHeight;
             }
-            const startX = clamp(currentColumn * sourceWidth, 0, originalImage.width - sourceWidth);
-            const verticalY = clamp(samplingOffset, 0, originalImage.height - sourceHeight);
-            ctx.drawImage(originalImage, startX, verticalY, sourceWidth, sourceHeight, 0, 0, brushSize, brushSize);
+            const startX = clamp(currentColumn * sampledWidth, 0, originalImage.width - sampledWidth);
+            const verticalY = clamp(samplingOffset, 0, originalImage.height - sampledHeight);
+            ctx.drawImage(originalImage, startX, verticalY, sampledWidth, sampledHeight, 0, 0, brushSize, brushSize);
             break;
             
         case 'horizontal':
-            samplingOffset += offsetSpeed * (samplingDirection === 'forward' ? 1 : -1);
+            samplingOffset = roundToPixel(samplingOffset + offsetSpeed * (samplingDirection === 'forward' ? 1 : -1));
             if (samplingOffset >= originalImage.width || samplingOffset < 0) {
-                currentRow += (samplingDirection === 'forward' ? 1 : -1);
-                if (currentRow >= Math.floor(originalImage.height / sourceHeight) || currentRow < 0) {
-                    currentRow = samplingDirection === 'forward' ? 0 : Math.floor(originalImage.height / sourceHeight) - 1;
+                currentRow = roundToPixel(currentRow + (samplingDirection === 'forward' ? 1 : -1));
+                if (currentRow >= Math.floor(originalImage.height / sampledHeight) || currentRow < 0) {
+                    currentRow = samplingDirection === 'forward' ? 0 : Math.floor(originalImage.height / sampledHeight) - 1;
                 }
-                samplingOffset = samplingDirection === 'forward' ? 0 : originalImage.width - sourceWidth;
+                samplingOffset = samplingDirection === 'forward' ? 0 : originalImage.width - sampledWidth;
             }
-            const startY = clamp(currentRow * sourceHeight, 0, originalImage.height - sourceHeight);
-            const horizontalX = clamp(samplingOffset, 0, originalImage.width - sourceWidth);
-            ctx.drawImage(originalImage, horizontalX, startY, sourceWidth, sourceHeight, 0, 0, brushSize, brushSize);
+            const startY = clamp(currentRow * sampledHeight, 0, originalImage.height - sampledHeight);
+            const horizontalX = clamp(samplingOffset, 0, originalImage.width - sampledWidth);
+            ctx.drawImage(originalImage, horizontalX, startY, sampledWidth, sampledHeight, 0, 0, brushSize, brushSize);
             break;
             
         case 'random':
-            const randomX = clamp(Math.random() * (originalImage.width - sourceWidth), 0, originalImage.width - sourceWidth);
-            const randomY = clamp(Math.random() * (originalImage.height - sourceHeight), 0, originalImage.height - sourceHeight);
-            ctx.drawImage(originalImage, randomX, randomY, sourceWidth, sourceHeight, 0, 0, brushSize, brushSize);
+            const randomX = clamp(Math.random() * (originalImage.width - sampledWidth), 0, originalImage.width - sampledWidth);
+            const randomY = clamp(Math.random() * (originalImage.height - sampledHeight), 0, originalImage.height - sampledHeight);
+            ctx.drawImage(originalImage, randomX, randomY, sampledWidth, sampledHeight, 0, 0, brushSize, brushSize);
             break;
     }
 }
