@@ -337,36 +337,27 @@ function drawLine(fromX: number, fromY: number, toX: number, toY: number, speed:
 function drawPoint(x: number, y: number, speed: number) {
     if (!originalImage) return;
 
-    // Calculate precise scaling factors
-    const scaleX = originalImage.width / imageVisualization.width;
-    const scaleY = originalImage.height / imageVisualization.height;
-
-    // Calculate source coordinates with proper rounding
-    const sourceX = Math.round(x * scaleX);
-    const sourceY = Math.round(y * scaleY);
-    const sourceWidth = Math.round(brushSize * scaleX);
-    const sourceHeight = Math.round(brushSize * scaleY);
-
     const tempCanvas = document.createElement('canvas');
-    const tempCtx = tempCanvas.getContext('2d')!;
+    const tempCtx = tempCanvas.getContext('2d', { willReadFrequently: true })!;
+    
+    // Make temp canvas exactly brush size
     tempCanvas.width = brushSize;
     tempCanvas.height = brushSize;
 
-    // Calculate draw position with proper rounding
-    const drawX = Math.round(x - brushSize / 2);
-    const drawY = Math.round(y - brushSize / 2);
+    // Calculate draw position precisely
+    const drawX = x - brushSize / 2;
+    const drawY = y - brushSize / 2;
 
-    // Ensure sampling coordinates are within bounds and consistent
-    const adjustedSourceX = Math.max(0, Math.min(sourceX - Math.round(sourceWidth / 2), originalImage.width - sourceWidth));
-    const adjustedSourceY = Math.max(0, Math.min(sourceY - Math.round(sourceHeight / 2), originalImage.height - sourceHeight));
+    // Use the helper function to get precise sampling coordinates
+    const sourceSample = getSourceSamplingRect(x, y, brushSize, originalImage);
 
-    // Sample the image using consistent coordinates
+    // First, draw the sampled image portion to temp canvas
     tempCtx.drawImage(
         originalImage,
-        adjustedSourceX,
-        adjustedSourceY,
-        sourceWidth,
-        sourceHeight,
+        sourceSample.x,
+        sourceSample.y,
+        sourceSample.width,
+        sourceSample.height,
         0,
         0,
         brushSize,
@@ -380,7 +371,7 @@ function drawPoint(x: number, y: number, speed: number) {
         tempCtx.putImageData(processedImageData, 0, 0);
     }
 
-    // Apply brush shape mask with anti-aliasing
+    // Apply brush shape mask
     tempCtx.globalCompositeOperation = 'destination-in';
     tempCtx.fillStyle = 'black';
     tempCtx.beginPath();
@@ -393,17 +384,95 @@ function drawPoint(x: number, y: number, speed: number) {
     
     tempCtx.fill();
 
-    // Calculate the actual drawing bounds
-    const canvasRight = canvas.width - 1;
-    const canvasBottom = canvas.height - 1;
+    // Calculate the visible portion of the brush
+    const canvasClipX = Math.max(0, drawX);
+    const canvasClipY = Math.max(0, drawY);
+    const canvasClipWidth = Math.min(brushSize, canvas.width - canvasClipX);
+    const canvasClipHeight = Math.min(brushSize, canvas.height - canvasClipY);
+
+    // Calculate the source region from temp canvas
+    const tempSourceX = Math.max(0, -drawX);
+    const tempSourceY = Math.max(0, -drawY);
+    const tempSourceWidth = canvasClipWidth;
+    const tempSourceHeight = canvasClipHeight;
+
+    if (tempSourceWidth > 0 && tempSourceHeight > 0) {
+        // Draw only the visible portion
+        ctx.drawImage(
+            tempCanvas,
+            tempSourceX,
+            tempSourceY,
+            tempSourceWidth,
+            tempSourceHeight,
+            canvasClipX,
+            canvasClipY,
+            tempSourceWidth,
+            tempSourceHeight
+        );
+
+        // Update drawing layer with the same portion
+        const drawnPortion = ctx.getImageData(
+            canvasClipX,
+            canvasClipY,
+            tempSourceWidth,
+            tempSourceHeight
+        );
+
+        updateDrawingLayerPrecise(
+            drawnPortion,
+            canvasClipX,
+            canvasClipY,
+            tempSourceWidth,
+            tempSourceHeight
+        );
+    }
+}
+
+function updateDrawingLayerPrecise(
+    drawnContent: ImageData,
+    x: number,
+    y: number,
+    width: number,
+    height: number
+) {
+    // Ensure we're within canvas bounds
+    const startX = Math.max(0, Math.min(x, canvas.width));
+    const startY = Math.max(0, Math.min(y, canvas.height));
+    const endX = Math.min(startX + width, canvas.width);
+    const endY = Math.min(startY + height, canvas.height);
+
+    for (let py = startY; py < endY; py++) {
+        for (let px = startX; px < endX; px++) {
+            const sourceIndex = ((py - startY) * width + (px - startX)) * 4;
+            const targetIndex = (py * canvas.width + px) * 4;
+
+            // Only update if the pixel has some opacity
+            if (drawnContent.data[sourceIndex + 3] > 0) {
+                // Copy all channels including alpha
+                drawingLayer.data[targetIndex] = drawnContent.data[sourceIndex];
+                drawingLayer.data[targetIndex + 1] = drawnContent.data[sourceIndex + 1];
+                drawingLayer.data[targetIndex + 2] = drawnContent.data[sourceIndex + 2];
+                drawingLayer.data[targetIndex + 3] = drawnContent.data[sourceIndex + 3];
+            }
+        }
+    }
+}
+
+function getSourceSamplingRect(x: number, y: number, brushSize: number, originalImage: HTMLImageElement) {
+    const scaleX = originalImage.width / canvas.width;
+    const scaleY = originalImage.height / canvas.height;
     
-    // Ensure we don't draw outside the canvas
-    const finalDrawX = Math.max(0, Math.min(drawX, canvasRight - brushSize));
-    const finalDrawY = Math.max(0, Math.min(drawY, canvasBottom - brushSize));
+    const sourceX = x * scaleX;
+    const sourceY = y * scaleY;
+    const sourceWidth = brushSize * scaleX;
+    const sourceHeight = brushSize * scaleY;
     
-    // Draw at the calculated position
-    ctx.drawImage(tempCanvas, finalDrawX, finalDrawY);
-    updateDrawingLayer(finalDrawX, finalDrawY, brushSize, brushSize);
+    return {
+        x: Math.max(0, Math.min(sourceX - sourceWidth / 2, originalImage.width - sourceWidth)),
+        y: Math.max(0, Math.min(sourceY - sourceHeight / 2, originalImage.height - sourceHeight)),
+        width: sourceWidth,
+        height: sourceHeight
+    };
 }
 
 function sampleImage(ctx: CanvasRenderingContext2D, sourceX: number, sourceY: number, sourceWidth: number, sourceHeight: number, speed: number) {
@@ -766,18 +835,30 @@ function resizeAndDrawImage(targetCanvas: HTMLCanvasElement, targetCtx: CanvasRe
 
 // Modify the updateDrawingLayer function
 function updateDrawingLayer(x: number, y: number, width: number, height: number) {
-    const drawnContent = ctx.getImageData(x, y, width, height);
+    // Ensure coordinates and dimensions are valid
+    const safeX = Math.max(0, Math.min(x, canvas.width));
+    const safeY = Math.max(0, Math.min(y, canvas.height));
+    const safeWidth = Math.min(width, canvas.width - safeX);
+    const safeHeight = Math.min(height, canvas.height - safeY);
+
+    if (safeWidth <= 0 || safeHeight <= 0) return;
+
+    const drawnContent = ctx.getImageData(safeX, safeY, safeWidth, safeHeight);
     
-    for (let i = 0; i < drawnContent.data.length; i += 4) {
-        const drawingLayerIndex = ((y + Math.floor(i / (4 * width))) * canvas.width + x + (i / 4) % width) * 4;
-        
-        // If the pixel is not fully transparent in the drawn content
-        if (drawnContent.data[i + 3] > 0) {
-            // Copy the pixel to the drawing layer
-            drawingLayer.data[drawingLayerIndex] = drawnContent.data[i];
-            drawingLayer.data[drawingLayerIndex + 1] = drawnContent.data[i + 1];
-            drawingLayer.data[drawingLayerIndex + 2] = drawnContent.data[i + 2];
-            drawingLayer.data[drawingLayerIndex + 3] = drawnContent.data[i + 3];
+    for (let row = 0; row < safeHeight; row++) {
+        for (let col = 0; col < safeWidth; col++) {
+            const sourceIndex = (row * safeWidth + col) * 4;
+            const targetX = safeX + col;
+            const targetY = safeY + row;
+            const targetIndex = (targetY * canvas.width + targetX) * 4;
+
+            // Only update if the pixel is not fully transparent
+            if (drawnContent.data[sourceIndex + 3] > 0) {
+                drawingLayer.data[targetIndex] = drawnContent.data[sourceIndex];
+                drawingLayer.data[targetIndex + 1] = drawnContent.data[sourceIndex + 1];
+                drawingLayer.data[targetIndex + 2] = drawnContent.data[sourceIndex + 2];
+                drawingLayer.data[targetIndex + 3] = drawnContent.data[sourceIndex + 3];
+            }
         }
     }
 }
@@ -876,24 +957,67 @@ function saveCanvasToLocalStorage() {
 // Function to load canvas state from localStorage
 async function loadCanvasFromLocalStorage() {
     try {
-        // Load the history states first
+        // Load original image first if it exists
+        const savedOriginalImage = localStorage.getItem('savedOriginalImage');
+        if (savedOriginalImage) {
+            originalImage = new Image();
+            originalImage.src = savedOriginalImage;
+            
+            // Wait for image to load and resize canvases properly
+            await new Promise<void>((resolve) => {
+                originalImage.onload = () => {
+                    // Calculate dimensions that maintain aspect ratio
+                    const dimensions = calculateCanvasDimensions(originalImage.width, originalImage.height);
+                    
+                    // Resize both canvases to exactly the same dimensions
+                    resizeCanvases(dimensions.width, dimensions.height);
+                    
+                    // Clear both canvases
+                    ctx.clearRect(0, 0, dimensions.width, dimensions.height);
+                    visualizationCtx.clearRect(0, 0, dimensions.width, dimensions.height);
+                    
+                    // Draw the image on visualization canvas
+                    visualizationCtx.drawImage(originalImage, 0, 0, dimensions.width, dimensions.height);
+                    
+                    // Draw on main canvas if checkbox is checked
+                    if (showImageCheckbox.checked) {
+                        ctx.drawImage(originalImage, 0, 0, dimensions.width, dimensions.height);
+                    }
+                    
+                    resolve();
+                };
+            });
+        } else {
+            // If no image was saved, initialize with default dimensions
+            const initialDimensions = calculateCanvasDimensions(800, 600);
+            resizeCanvases(initialDimensions.width, initialDimensions.height);
+            drawPromptText(ctx, canvas);
+            drawPromptText(visualizationCtx, imageVisualization);
+        }
+
+        // Load the history states
         const savedHistoryData = localStorage.getItem('savedStateHistory');
         const savedStateIndex = localStorage.getItem('savedStateIndex');
         
         if (savedHistoryData && savedStateIndex) {
-            const historyDataUrls = JSON.parse(savedHistoryData);
+            const historyDataUrls: string[] = JSON.parse(savedHistoryData);
             currentStateIndex = parseInt(savedStateIndex, 10);
             
             // Convert data URLs back to ImageData
             stateHistory = await Promise.all(historyDataUrls.map(async (dataUrl: string) => {
                 const img = new Image();
                 img.src = dataUrl;
-                await new Promise(resolve => { img.onload = resolve; });
+                await new Promise<void>(resolve => { img.onload = () => resolve(); });
                 
                 const tempCanvas = document.createElement('canvas');
                 tempCanvas.width = canvas.width;
                 tempCanvas.height = canvas.height;
-                const tempCtx = tempCanvas.getContext('2d')!;
+                const tempCtx = tempCanvas.getContext('2d');
+                
+                if (!tempCtx) {
+                    throw new Error('Failed to get 2D context for temporary canvas');
+                }
+                
                 tempCtx.drawImage(img, 0, 0);
                 return tempCtx.getImageData(0, 0, canvas.width, canvas.height);
             }));
@@ -930,24 +1054,13 @@ async function loadCanvasFromLocalStorage() {
             samplingDirectionSelect.value = samplingDirection;
         }
         
-        // Load original image if it was saved
-        const savedOriginalImage = localStorage.getItem('savedOriginalImage');
-        if (savedOriginalImage) {
-            originalImage = new Image();
-            originalImage.src = savedOriginalImage;
-            await new Promise((resolve) => {
-                originalImage.onload = () => {
-                    resizeAndDrawImage(imageVisualization, visualizationCtx);
-                    resolve(null);
-                };
-            });
-        }
-        
         // Update the history buttons
         updateHistoryButtons();
         console.log('Canvas state restored successfully');
     } catch (error) {
         console.error('Error loading canvas state:', error);
+        // On error, initialize with default state
+        initCanvas();
     }
 }
 
