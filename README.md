@@ -141,7 +141,16 @@ This section describes how to use *Pic2Paint*. Once the application is open:
 
 The *Pic2Paint* web app is versatile and can be used for various artistic and creative purposes. Below are some common use cases, along with examples to illustrate how the app can be effectively utilized.
 
-TODO EXAMPLES
+### Examples
+
+#### Life Path
+![Life Path](life_path.png)
+
+#### Genesis
+![Genesis](genesis.png)
+
+#### Skyline
+![Skyline](skyline.png)
 
 ## Contributing
 If you'd like to contribute to *Pic2Paint*, please fork the repository and submit a pull request. Your contributions are welcome!
