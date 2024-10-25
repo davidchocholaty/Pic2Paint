@@ -658,15 +658,6 @@ function updateDrawingLayer(x: number, y: number, width: number, height: number)
     }
 }
 
-// Modify the setBackgroundColor function
-function setBackgroundColor(color: string) {
-    ctx.fillStyle = color;
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    
-    // Redraw the content from the drawing layer
-    ctx.putImageData(drawingLayer, 0, 0);
-}
-
 // Modify the resetCanvas function
 function resetCanvas() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
