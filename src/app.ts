@@ -1237,7 +1237,7 @@ class HelpButton {
 // Initialize the button
 const helpButton = new HelpButton({
     buttonId: 'helpButton',
-    url: 'https://github.com/davidchocholaty/Pic2Paint'
+    url: 'https://github.com/davidchocholaty/Pic2Paint#usage'
 });
 
 function updateDirectionSelectVisibility() {
