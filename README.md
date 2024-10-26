@@ -1,6 +1,8 @@
 # ![Pic2Paint Header](header.png)
 This repository contains the *Pic2Paint* web app, designed for image-based painting. It was created for the VIN course at BUT FIT in 2024.
 
+The application is available **[online](https://davidchocholaty.github.io/tools/pic2paint/)**.
+
 ## Introduction
 
 *Pic2Paint* is an innovative tool that bridges digital art and computational creativity, designed to help artists and enthusiasts recreate images on a digital canvas with precision and flexibility. By sampling colors from an original image, *Pic2Paint* offers an interactive and intuitive painting experience that combines the essence of traditional painting techniques with modern image processing.
@@ -145,6 +147,9 @@ The *Pic2Paint* web app is versatile and can be used for various artistic and cr
 
 #### Life Path
 ![Life Path](life_path.png)
+
+#### Storm
+![Storm](storm.png)
 
 #### Genesis
 ![Genesis](genesis.png)
