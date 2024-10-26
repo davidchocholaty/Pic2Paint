@@ -1029,6 +1029,8 @@ async function loadCanvasFromLocalStorage() {
             resizeCanvases(initialDimensions.width, initialDimensions.height);
             drawPromptText(ctx, canvas);
             drawPromptText(visualizationCtx, imageVisualization);
+
+            resetCanvas();
         }
 
         // Load the history states
