@@ -61,7 +61,6 @@ function initDrawingLayer() {
     saveState();
 }
 
-// Call this function after canvas is initialized
 initDrawingLayer();
 
 // Update brush size when slider changes
@@ -126,7 +125,7 @@ canvas.addEventListener('mousemove', (e) => {
         lastSamplingTime = currentTime;
     }
     updateVisualization(e.offsetX, e.offsetY);
-    updateBrushBorder(e.offsetX, e.offsetY); // Add this line
+    updateBrushBorder(e.offsetX, e.offsetY);
 });
 
 undoButton.addEventListener('click', handleUndo);
@@ -135,14 +134,14 @@ forwardButton.addEventListener('click', handleForward);
 resetButton.addEventListener('click', function(e: MouseEvent) {
     e.preventDefault();
     if (confirm("Are you sure you want to clear your drawing? This action cannot be undone.")) {
-        resetCanvas(); // Use the existing resetCanvas function
+        resetCanvas();
     }
 });
 
 function saveState() {
     const currentState = ctx.getImageData(0, 0, canvas.width, canvas.height);
     
-    // Remove any states after the current index (in case we're undoing and then drawing)
+    // Remove any states after the current index
     stateHistory = stateHistory.slice(0, currentStateIndex + 1);
     
     // Add new state
@@ -664,8 +663,6 @@ function updateVisualization(x: number, y: number) {
         visualizationCtx.drawImage(originalImage, 0, 0, imageVisualization.width, imageVisualization.height);
     }
 
-    const sourceX = Math.floor(x * (originalImage.width / canvas.width));
-    const sourceY = Math.floor(y * (originalImage.height / canvas.height));
     const sourceWidth = Math.ceil(brushSize * (originalImage.width / canvas.width));
     const sourceHeight = Math.ceil(brushSize * (originalImage.height / canvas.height));
 
@@ -692,9 +689,8 @@ function updateVisualization(x: number, y: number) {
     visualizationCtx.lineWidth = 2;
 
     if (samplingMethod !== 'normal') {
-        // Use a different color for non-normal sampling methods
         visualizationCtx.strokeStyle = 'blue';
-        visualizationCtx.fillStyle = 'rgba(0, 0, 255, 0.3)'; // Semi-transparent blue
+        visualizationCtx.fillStyle = 'rgba(0, 0, 255, 0.3)';
 
         let scaledX: number, scaledY: number;
         
@@ -841,7 +837,6 @@ function resizeAndDrawImage(targetCanvas: HTMLCanvasElement, targetCtx: CanvasRe
     }
 }
 
-// Modify the updateDrawingLayer function
 function updateDrawingLayer(x: number, y: number, width: number, height: number) {
     // Validate all inputs are finite numbers
     if (!Number.isFinite(x) || !Number.isFinite(y) || 
@@ -886,8 +881,6 @@ function updateDrawingLayer(x: number, y: number, width: number, height: number)
     }
 }
 
-
-// Modify the resetCanvas function
 function resetCanvas() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     initDrawingLayer();
@@ -917,7 +910,7 @@ function resetCanvas() {
     saveState();
 }
 
-// Add mousemove event listener to canvas to update visualization even when not drawing
+// Mousemove event listener to canvas to update visualization even when not drawing
 canvas.addEventListener('mousemove', (e) => {
     updateVisualization(e.offsetX, e.offsetY);
 });
@@ -1158,7 +1151,7 @@ function initCanvas() {
 
 saveDrawingButton.addEventListener('click', saveDrawing);
 
-// Add event listeners for page unload and load
+// Event listeners for page unload and load
 window.addEventListener('beforeunload', () => {
     saveCanvasToLocalStorage();
 });
