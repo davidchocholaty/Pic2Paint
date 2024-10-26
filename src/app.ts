@@ -99,9 +99,15 @@ samplingDirectionSelect.addEventListener('change', () => {
 canvas.addEventListener('mousedown', (e) => {
     drawing = true;
     [lastX, lastY] = [e.offsetX, e.offsetY];
-    lastSamplingTime = Date.now(); // Initialize the last sampling time
+    lastSamplingTime = Date.now();
+
+    // If this is the first draw action, save the initial state
+    if (stateHistory.length === 0) {
+        saveState();
+    }
+
     if (brushType !== 'continuous') {
-        drawShape(e.offsetX, e.offsetY, 0); // Use 0 as initial speed
+        drawShape(e.offsetX, e.offsetY, 0);
     }
 });
 
@@ -191,6 +197,14 @@ function handleForward() {
 }
 
 function updateHistoryButtons() {
+    // Disable both buttons if there's no history
+    if (stateHistory.length === 0) {
+        undoButton.disabled = true;
+        forwardButton.disabled = true;
+        return;
+    }
+
+    // Otherwise, check positions in history
     undoButton.disabled = currentStateIndex <= 0;
     forwardButton.disabled = currentStateIndex >= stateHistory.length - 1;
 }
@@ -550,7 +564,6 @@ function sampleImage(ctx: CanvasRenderingContext2D, sourceX: number, sourceY: nu
     }
 }
 
-
 function applyEffect(imageData: ImageData, effect: 'blur' | 'sharpen' | 'edgeDetection', strength: number): ImageData {
     const data = imageData.data;
     const width = imageData.width;
@@ -789,6 +802,14 @@ imageInput.addEventListener('change', (event) => {
     const reader = new FileReader();
 
     reader.onload = (e) => {
+        // Reset history before loading new image
+        stateHistory = [];
+        currentStateIndex = -1;
+        
+        // Explicitly disable both buttons
+        undoButton.disabled = true;
+        forwardButton.disabled = true;
+
         originalImage = new Image();
         originalImage.src = e.target!.result as string;
 
@@ -805,6 +826,12 @@ imageInput.addEventListener('change', (event) => {
             
             // Draw the image on visualization canvas
             visualizationCtx.drawImage(originalImage, 0, 0, dimensions.width, dimensions.height);
+
+            // Initialize fresh drawing layer
+            initDrawingLayer();
+            
+            // Don't save initial state here anymore
+            updateHistoryButtons();
         };
     };
 
